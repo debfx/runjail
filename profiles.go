@@ -16,6 +16,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"fmt"
 	"os"
 	"strconv"
@@ -107,12 +108,9 @@ func getProfile(name string) (jailProfile, error) {
 			return profile, err
 		}
 
-		flatpakInfo, err := getDataFile("[Application]\nname=runjail.debfx.github.com\n")
-		if err != nil {
-			return profile, err
-		}
+		flatpakInfo := base64.StdEncoding.EncodeToString([]byte("[Application]\nname=runjail.debfx.github.com\n"))
 
-		profile.Mounts = append(profile.Mounts, mount{Path: "/.flatpak-info", Other: strconv.Itoa(int(flatpakInfo.Fd())), Type: mountTypeFileData})
+		profile.Mounts = append(profile.Mounts, mount{Path: "/.flatpak-info", Other: flatpakInfo, Type: mountTypeFileData})
 		// compatbility with older flatpak
 		profile.Mounts = append(profile.Mounts, mount{Path: fmt.Sprintf("%s/flatpak-info", runtimeDir), Other: "/.flatpak-info", Type: mountTypeSymlink})
 	}

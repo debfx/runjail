@@ -16,6 +16,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"fmt"
 	"os"
 	"os/exec"
@@ -57,7 +58,12 @@ func bwrapRun(settings settingsStruct, mounts []mount, environ []string) error {
 		case mountTypeSymlink:
 			bwrapArgs = append(bwrapArgs, "--symlink", mount.Other, mount.Path)
 		case mountTypeFileData:
-			bwrapArgs = append(bwrapArgs, "--ro-bind-data", mount.Other, mount.Path)
+			data, _ := base64.StdEncoding.DecodeString(mount.Other)
+			dataFile, err := getDataFileBytes(data)
+			if err != nil {
+				return err
+			}
+			bwrapArgs = append(bwrapArgs, "--ro-bind-data", strconv.Itoa(int(dataFile.Fd())), mount.Path)
 		default:
 			panic("")
 		}

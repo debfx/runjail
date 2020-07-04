@@ -17,6 +17,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/gob"
 	"fmt"
 	"io/ioutil"
@@ -331,17 +332,7 @@ func usernsChild() error {
 				return err
 			}
 
-			fd, err := strconv.Atoi(mount.Other)
-			if err != nil {
-				return err
-			}
-			dataFile := os.NewFile(uintptr(fd), "")
-			data, err := ioutil.ReadAll(dataFile)
-			if err != nil {
-				return err
-			}
-			dataFile.Close()
-
+			data, _ := base64.StdEncoding.DecodeString(mount.Other)
 			_, err = tmpFile.Write(data)
 			if err != nil {
 				return err
