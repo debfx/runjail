@@ -101,6 +101,20 @@ func getProfile(name string) (jailProfile, error) {
 
 		profile.Mounts = append(profile.Mounts, mount{Path: fmt.Sprintf("%s/wayland-0", runtimeDir), Other: waylandSocket, Type: mountTypeBindRw})
 		profile.EnvVars["WAYLAND_DISPLAY"] = "wayland-0"
+	case "flatpak":
+		runtimeDir, err := getUserRuntimeDir()
+		if err != nil {
+			return profile, err
+		}
+
+		flatpakInfo, err := getDataFile("[Application]\nname=runjail.debfx.github.com\n")
+		if err != nil {
+			return profile, err
+		}
+
+		profile.Mounts = append(profile.Mounts, mount{Path: "/.flatpak-info", Other: strconv.Itoa(int(flatpakInfo.Fd())), Type: mountTypeFileData})
+		// compatbility with older flatpak
+		profile.Mounts = append(profile.Mounts, mount{Path: fmt.Sprintf("%s/flatpak-info", runtimeDir), Other: "/.flatpak-info", Type: mountTypeSymlink})
 	}
 
 	return profile, nil
