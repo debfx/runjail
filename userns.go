@@ -77,6 +77,7 @@ func usernsRun(settings settingsStruct, mounts []mount, environ []string) error 
 	if err != nil {
 		return err
 	}
+	defer dataFile.Close()
 
 	cmd := exec.Cmd{
 		Path:   "/proc/self/exe",
