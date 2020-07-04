@@ -85,12 +85,4 @@ func bwrapRun(settings settingsStruct, mounts []mount) error {
 	execArgs = append(execArgs, settings.Command...)
 
 	return syscall.Exec(cmdPath, execArgs, os.Environ())
-
-	/*runArgs := append(bwrapArgs, cmdArgs...)
-	fmt.Printf("%v\n", runArgs)
-	cmd := exec.Command(cmdPath, runArgs...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Stdin = os.Stdin
-	return cmd.Run()*/
 }
