@@ -23,8 +23,8 @@ import (
 )
 
 type jailProfile struct {
-	EnvVariables map[string]string
-	Mounts       []mount
+	EnvVars map[string]string
+	Mounts  []mount
 }
 
 func getX11Socket() (string, error) {
@@ -74,7 +74,10 @@ func getWaylandSocket() (string, error) {
 }
 
 func getProfile(name string) (jailProfile, error) {
-	profile := jailProfile{}
+	profile := jailProfile{
+		EnvVars: map[string]string{},
+		Mounts:  []mount{},
+	}
 
 	switch name {
 	case "x11":
@@ -84,7 +87,7 @@ func getProfile(name string) (jailProfile, error) {
 		}
 
 		profile.Mounts = append(profile.Mounts, mount{Path: "/tmp/.X11-unix/X0", Other: x11Socket, Type: mountTypeBindRw})
-		profile.EnvVariables["DISPLAY"] = ":0"
+		profile.EnvVars["DISPLAY"] = ":0"
 	case "wayland":
 		waylandSocket, err := getWaylandSocket()
 		if err != nil {
@@ -97,7 +100,7 @@ func getProfile(name string) (jailProfile, error) {
 		}
 
 		profile.Mounts = append(profile.Mounts, mount{Path: fmt.Sprintf("%s/wayland-0", runtimeDir), Other: waylandSocket, Type: mountTypeBindRw})
-		profile.EnvVariables["WAYLAND_DISPLAY"] = "wayland-0"
+		profile.EnvVars["WAYLAND_DISPLAY"] = "wayland-0"
 	}
 
 	return profile, nil

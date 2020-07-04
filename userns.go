@@ -57,7 +57,7 @@ func decodePassUsernsChild(input []byte) (settingsStruct, []mount, error) {
 	return output.Settings, output.Mounts, nil
 }
 
-func usernsRun(settings settingsStruct, mounts []mount) error {
+func usernsRun(settings settingsStruct, mounts []mount, environ []string) error {
 	var unshareFlags uintptr = syscall.CLONE_NEWUSER | syscall.CLONE_NEWNS | syscall.CLONE_NEWPID
 	if !settings.Ipc {
 		unshareFlags = unshareFlags | syscall.CLONE_NEWIPC
@@ -84,6 +84,7 @@ func usernsRun(settings settingsStruct, mounts []mount) error {
 		Stdout:     os.Stdout,
 		Stderr:     os.Stderr,
 		ExtraFiles: []*os.File{dataFile},
+		Env:        environ,
 		SysProcAttr: &syscall.SysProcAttr{
 			Cloneflags: unshareFlags,
 			UidMappings: []syscall.SysProcIDMap{

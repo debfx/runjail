@@ -24,7 +24,7 @@ import (
 	"syscall"
 )
 
-func bwrapRun(settings settingsStruct, mounts []mount) error {
+func bwrapRun(settings settingsStruct, mounts []mount, environ []string) error {
 	bwrapArgs := []string{"--unshare-pid", "--proc", "/proc"}
 	remountRoArgs := []string{}
 
@@ -84,5 +84,5 @@ func bwrapRun(settings settingsStruct, mounts []mount) error {
 	execArgs := append([]string{"bwrap"}, "--args", strconv.Itoa(int(bwrapArgsDataFile.Fd())), "--")
 	execArgs = append(execArgs, settings.Command...)
 
-	return syscall.Exec(cmdPath, execArgs, os.Environ())
+	return syscall.Exec(cmdPath, execArgs, environ)
 }

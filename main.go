@@ -223,19 +223,42 @@ func main() {
 		fatalErr(err)
 	}
 
-	mounts := mergeMounts(defaultMountOptions, configMountOptions)
+	mounts := defaultMountOptions
+	envVars := map[string]string{}
+	for _, item := range os.Environ() {
+		splits := strings.SplitN(item, "=", 2)
+		envVars[splits[0]] = splits[1]
+	}
+	for _, profileName := range settings.Profiles {
+		profile, err := getProfile(profileName)
+		if err != nil {
+			fatalErr(err)
+		}
+
+		mounts = mergeMounts(mounts, profile.Mounts)
+		for key, value := range profile.EnvVars {
+			envVars[key] = value
+		}
+	}
+
+	mounts = mergeMounts(mounts, configMountOptions)
 	mounts = mergeMounts(mounts, flagMountOptions)
 	if err := validateMounts(mounts); err != nil {
 		fatalErr(err)
 	}
 	sort.Slice(mounts, func(i, j int) bool { return mounts[i].Path < mounts[j].Path })
 
+	envVarsFlat := []string{}
+	for key, value := range envVars {
+		envVarsFlat = append(envVarsFlat, key+"="+value)
+	}
+
 	fmt.Printf("%v\n", mounts)
 
 	if settings.SandboxBackend == "userns" {
-		err = usernsRun(settings, mounts)
+		err = usernsRun(settings, mounts, envVarsFlat)
 	} else {
-		err = bwrapRun(settings, mounts)
+		err = bwrapRun(settings, mounts, envVarsFlat)
 	}
 
 	if err != nil {
