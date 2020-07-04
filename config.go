@@ -35,6 +35,7 @@ type configStruct struct {
 	Seccomp  string            `yaml:"seccomp"`
 	Profiles StringArray       `yaml:"profiles"`
 	Command  StringArray       `yaml:"command"`
+	Backend  string            `yaml:"backend"`
 }
 
 // parse yaml array as slice

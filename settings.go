@@ -16,21 +16,23 @@
 package main
 
 type settingsStruct struct {
-	Debug    bool
-	Network  bool
-	Ipc      bool
-	Cwd      string
-	Seccomp  string
-	Profiles []string
-	Command  []string
+	Debug          bool
+	Network        bool
+	Ipc            bool
+	Cwd            string
+	Seccomp        string
+	Profiles       []string
+	Command        []string
+	SandboxBackend string
 }
 
 func getDefaultSettings() settingsStruct {
 	return settingsStruct{
-		Debug:   false,
-		Network: false,
-		Ipc:     false,
-		Cwd:     ".",
-		Seccomp: "yes",
+		Debug:          false,
+		Network:        false,
+		Ipc:            false,
+		Cwd:            ".",
+		Seccomp:        "yes",
+		SandboxBackend: "userns",
 	}
 }

@@ -90,6 +90,7 @@ func main() {
 	flagSeccomp := flag.String("seccomp", "yes", "Enable seccomp syscall filtering (yes/minimal/no).")
 	flagProfile := flag.StringSlice("profile", []string{}, "Enable predefined profiles (x11/wayland).")
 	flagConfig := flag.String("config", "", "Fetch options from config file.")
+	flagBackend := flag.String("backend", "userns", "Backend for sandbox (userns/bwrap).")
 
 	expandedArgs := expandCmdFlags()
 
@@ -152,6 +153,9 @@ func main() {
 		if len(config.Command) != 0 {
 			settings.Command = config.Command
 		}
+		if config.Backend != "" {
+			settings.SandboxBackend = config.Backend
+		}
 	}
 
 	if flag.Lookup("debug").Changed {
@@ -184,6 +188,13 @@ func main() {
 		for _, profileArg := range *flagProfile {
 			settings.Profiles = append(settings.Profiles, strings.Split(profileArg, ",")...)
 		}
+	}
+
+	if flag.Lookup("backend").Changed {
+		settings.SandboxBackend = *flagBackend
+	}
+	if settings.SandboxBackend != "userns" && settings.SandboxBackend != "bwrap" {
+		fatal(fmt.Sprintf("\"%s\" is not a valid sandbox backend", settings.SandboxBackend))
 	}
 
 	if len(flag.Args()) != 0 {
@@ -221,10 +232,13 @@ func main() {
 
 	fmt.Printf("%v\n", mounts)
 
-	/*if err := bwrapRun(settings, mounts); err != nil {
-		fatalErr(err)
-	}*/
-	if err := usernsRun(settings, mounts); err != nil {
+	if settings.SandboxBackend == "userns" {
+		err = usernsRun(settings, mounts)
+	} else {
+		err = bwrapRun(settings, mounts)
+	}
+
+	if err != nil {
 		fatalErr(err)
 	}
 }
