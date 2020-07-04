@@ -79,13 +79,12 @@ func usernsRun(settings settingsStruct, mounts []mount, environ []string) error 
 	}
 
 	cmd := exec.Cmd{
-		Path:       "/proc/self/exe",
-		Args:       []string{"/proc/self/exe", "userns-child", strconv.Itoa(int(dataFile.Fd()))},
-		Stdin:      os.Stdin,
-		Stdout:     os.Stdout,
-		Stderr:     os.Stderr,
-		ExtraFiles: []*os.File{dataFile},
-		Env:        environ,
+		Path:   "/proc/self/exe",
+		Args:   []string{"/proc/self/exe", "userns-child", strconv.Itoa(int(dataFile.Fd()))},
+		Stdin:  os.Stdin,
+		Stdout: os.Stdout,
+		Stderr: os.Stderr,
+		Env:    environ,
 		SysProcAttr: &syscall.SysProcAttr{
 			Cloneflags: unshareFlags,
 			UidMappings: []syscall.SysProcIDMap{
