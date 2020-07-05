@@ -82,6 +82,36 @@ func bwrapRun(settings settingsStruct, mounts []mount, environ []string, fork bo
 		}
 	}
 
+	if settings.Seccomp != "no" {
+		seccompFilter, err := loadSeccomp(settings.Seccomp)
+		if err != nil {
+			return err
+		}
+		defer seccompFilter.Release()
+
+		bpfFile, err := createTempFile("")
+		if err != nil {
+			return err
+		}
+		defer bpfFile.Close()
+
+		if err := seccompFilter.ExportBPF(bpfFile); err != nil {
+			return err
+		}
+
+		if _, err := bpfFile.Seek(0, 0); err != nil {
+			return err
+		}
+
+		if err := clearCloseOnExec(bpfFile.Fd()); err != nil {
+			return err
+		}
+
+		bwrapArgs = append(bwrapArgs, "--seccomp", strconv.Itoa(int(bpfFile.Fd())))
+	} else {
+		bwrapArgs = append(bwrapArgs, "--new-session")
+	}
+
 	cmdPath, err := exec.LookPath("bwrap")
 	if err != nil {
 		return err

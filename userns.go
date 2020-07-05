@@ -423,6 +423,22 @@ func usernsChild() error {
 		return fmt.Errorf("chdir to %s failed: %w", settings.Cwd, err)
 	}
 
+	if settings.Seccomp != "no" {
+		seccompFilter, err := loadSeccomp(settings.Seccomp)
+		if err != nil {
+			return err
+		}
+		defer seccompFilter.Release()
+
+		if err := seccompFilter.Load(); err != nil {
+			return err
+		}
+	} else {
+		if _, err := syscall.Setsid(); err != nil {
+			return err
+		}
+	}
+
 	executable, err := exec.LookPath(settings.Command[0])
 	if err != nil {
 		return fmt.Errorf("executable does not exist: %w", err)
