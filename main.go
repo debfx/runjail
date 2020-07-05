@@ -195,7 +195,7 @@ func main() {
 	flagNet := flag.String("net", "no", "Enable/disable network access (yes/no).")
 	flagCwd := flag.String("cwd", ".", "Set the current working directory.")
 	flagSeccomp := flag.String("seccomp", "yes", "Enable seccomp syscall filtering (yes/minimal/no).")
-	flagProfile := flag.StringSlice("profile", []string{}, "Enable predefined profiles (x11/wayland).")
+	flagProfile := flag.StringSlice("profile", []string{}, "Enable predefined profiles (x11/wayland/flatpak).")
 	flagConfig := flag.String("config", "", "Fetch options from config file.")
 	flagBackend := flag.String("backend", "userns", "Backend for sandbox (userns/bwrap).")
 
