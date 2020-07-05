@@ -25,7 +25,7 @@ import (
 	"syscall"
 )
 
-func bwrapRun(settings settingsStruct, mounts []mount, environ []string) error {
+func bwrapRun(settings settingsStruct, mounts []mount, environ []string, fork bool) error {
 	bwrapArgs := []string{"--unshare-pid", "--proc", "/proc"}
 	remountRoArgs := []string{}
 
@@ -63,6 +63,7 @@ func bwrapRun(settings settingsStruct, mounts []mount, environ []string) error {
 			if err != nil {
 				return err
 			}
+			defer dataFile.Close()
 			bwrapArgs = append(bwrapArgs, "--ro-bind-data", strconv.Itoa(int(dataFile.Fd())), mount.Path)
 		default:
 			panic("")
@@ -70,6 +71,13 @@ func bwrapRun(settings settingsStruct, mounts []mount, environ []string) error {
 	}
 
 	bwrapArgs = append(bwrapArgs, remountRoArgs...)
+
+	for _, fd := range settings.SyncFds {
+		bwrapArgs = append(bwrapArgs, "--sync-fd", strconv.Itoa(int(fd)))
+		if err := clearCloseOnExec(fd); err != nil {
+			return err
+		}
+	}
 
 	cmdPath, err := exec.LookPath("bwrap")
 	if err != nil {
@@ -86,9 +94,26 @@ func bwrapRun(settings settingsStruct, mounts []mount, environ []string) error {
 	if err != nil {
 		return err
 	}
+	defer bwrapArgsDataFile.Close()
 
 	execArgs := append([]string{"bwrap"}, "--args", strconv.Itoa(int(bwrapArgsDataFile.Fd())), "--")
 	execArgs = append(execArgs, settings.Command...)
 
-	return syscall.Exec(cmdPath, execArgs, environ)
+	if fork {
+		cmd := exec.Cmd{
+			Path:   cmdPath,
+			Args:   execArgs,
+			Stdin:  os.Stdin,
+			Stdout: os.Stdout,
+			Stderr: os.Stderr,
+			Env:    environ,
+		}
+		if err := cmd.Start(); err != nil {
+			return err
+		}
+
+		return nil
+	} else {
+		return syscall.Exec(cmdPath, execArgs, environ)
+	}
 }

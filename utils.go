@@ -109,6 +109,20 @@ func yesNoStrToBool(str string) (bool, error) {
 	return false, fmt.Errorf("\"%s\" is not a valid yes/no value", str)
 }
 
+func setCloseOnExec(fd uintptr) error {
+	flags, err := unix.FcntlInt(fd, syscall.F_GETFD, 0)
+	if err != nil {
+		return err
+	}
+
+	_, err = unix.FcntlInt(fd, syscall.F_SETFD, flags|syscall.FD_CLOEXEC)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func clearCloseOnExec(fd uintptr) error {
 	flags, err := unix.FcntlInt(fd, syscall.F_GETFD, 0)
 	if err != nil {

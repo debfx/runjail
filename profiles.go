@@ -24,8 +24,9 @@ import (
 )
 
 type jailProfile struct {
-	EnvVars map[string]string
-	Mounts  []mount
+	EnvVars  map[string]string
+	Mounts   []mount
+	Settings settingsStruct
 }
 
 func getX11Socket() (string, error) {
@@ -113,6 +114,9 @@ func getProfile(name string) (jailProfile, error) {
 		profile.Mounts = append(profile.Mounts, mount{Path: "/.flatpak-info", Other: flatpakInfo, Type: mountTypeFileData})
 		// compatbility with older flatpak
 		profile.Mounts = append(profile.Mounts, mount{Path: fmt.Sprintf("%s/flatpak-info", runtimeDir), Other: "/.flatpak-info", Type: mountTypeSymlink})
+
+		profile.Settings.DbusCall = append(profile.Settings.DbusCall, "org.freedesktop.portal.*=*")
+		profile.Settings.DbusBroadcast = append(profile.Settings.DbusBroadcast, "org.freedesktop.portal.*=@/org/freedesktop/portal/*")
 	}
 
 	return profile, nil

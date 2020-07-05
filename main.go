@@ -17,8 +17,12 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
+	"os/exec"
+	"path"
 	"sort"
+	"strconv"
 	"strings"
 
 	flag "github.com/spf13/pflag"
@@ -67,6 +71,109 @@ func expandCmdFlags() []string {
 	}
 
 	return expandedArgs
+}
+
+func setupDbusProxy(originalSettings settingsStruct) (proxyPipe uintptr, dbusMount mount, cleanupFile string, err error) {
+	runtimeDir, err := getUserRuntimeDir()
+	if err != nil {
+		return
+	}
+
+	proxySocketDir := path.Join(runtimeDir, ".dbus-proxy")
+	if err = os.MkdirAll(proxySocketDir, 0750); err != nil {
+		return
+	}
+	proxySocketFile, err := ioutil.TempFile(proxySocketDir, "session-bus-proxy-")
+	if err != nil {
+		return
+	}
+	cleanupFile = proxySocketFile.Name()
+	err = proxySocketFile.Close()
+	if err != nil {
+		return
+	}
+
+	hostSocketPath := path.Join(runtimeDir, "bus")
+	dbusProxyBin, err := exec.LookPath("xdg-dbus-proxy")
+	if err != nil {
+		return
+	}
+
+	pipeR, pipeW, err := os.Pipe()
+	if err != nil {
+		return
+	}
+	// pass pipeW to xdg-dbus-proxy and close it in this process afterwards
+	if err = clearCloseOnExec(pipeW.Fd()); err != nil {
+		return
+	}
+	defer pipeW.Close()
+
+	dbusProxyArgs := []string{"--fd=" + strconv.Itoa(int(pipeW.Fd())), "unix:path=" + hostSocketPath, proxySocketFile.Name(), "--filter"}
+
+	// DBus filter explanation: https://bugs.freedesktop.org/show_bug.cgi?id=101902
+	for _, name := range originalSettings.DbusOwn {
+		dbusProxyArgs = append(dbusProxyArgs, "--own="+name)
+	}
+
+	for _, name := range originalSettings.DbusTalk {
+		dbusProxyArgs = append(dbusProxyArgs, "--talk="+name)
+	}
+
+	for _, name := range originalSettings.DbusCall {
+		dbusProxyArgs = append(dbusProxyArgs, "--call="+name)
+	}
+
+	for _, name := range originalSettings.DbusBroadcast {
+		dbusProxyArgs = append(dbusProxyArgs, "--broadcast="+name)
+	}
+
+	printCmdArgs := strings.Join(dbusProxyArgs, " ")
+	fmt.Fprintf(os.Stderr, "Running: dbus-proxy %s\n", printCmdArgs)
+
+	argsFile, err := getDataFileBytes(append([]byte(strings.Join(dbusProxyArgs, "\x00")), []byte("\x00")...))
+	if err != nil {
+		return
+	}
+	defer argsFile.Close()
+
+	rawMountOptions, err := getDefaultOptions()
+	if err != nil {
+		return
+	}
+	rawMountOptions.Rw = append(rawMountOptions.Rw, hostSocketPath)
+	rawMountOptions.Rw = append(rawMountOptions.Rw, proxySocketDir)
+	rawMountOptions.Ro = append(rawMountOptions.Ro, dbusProxyBin)
+	mountOptions, err := parseRawMountOptions(rawMountOptions)
+	if err != nil {
+		return
+	}
+
+	settings := getDefaultSettings()
+	settings.Cwd = "/"
+	settings.Command = []string{dbusProxyBin, "--args=" + strconv.Itoa(int(argsFile.Fd()))}
+	settings.Network = false
+	settings.Debug = originalSettings.Debug
+	settings.SandboxBackend = originalSettings.SandboxBackend
+
+	err = run(settings, mountOptions, os.Environ(), true)
+	if err != nil {
+		return
+	}
+
+	dataRead := make([]byte, 1)
+	bytesRead, err := pipeR.Read(dataRead)
+	if err != nil {
+		return
+	}
+	if bytesRead != 1 {
+		err = fmt.Errorf("failed to initalize dbus proxy, syncing failed")
+		return
+	}
+
+	proxyPipe = pipeR.Fd()
+	dbusMount = mount{Type: mountTypeBindRw, Path: hostSocketPath, Other: proxySocketFile.Name()}
+	return
 }
 
 func main() {
@@ -239,29 +346,55 @@ func main() {
 		for key, value := range profile.EnvVars {
 			envVars[key] = value
 		}
+
+		// merge a subset of settings
+		settings.DbusOwn = append(settings.DbusOwn, profile.Settings.DbusOwn...)
+		settings.DbusTalk = append(settings.DbusTalk, profile.Settings.DbusTalk...)
+		settings.DbusCall = append(settings.DbusCall, profile.Settings.DbusCall...)
+		settings.DbusBroadcast = append(settings.DbusBroadcast, profile.Settings.DbusBroadcast...)
 	}
 
 	mounts = mergeMounts(mounts, configMountOptions)
 	mounts = mergeMounts(mounts, flagMountOptions)
-	if err := validateMounts(mounts); err != nil {
-		fatalErr(err)
+
+	if len(settings.DbusOwn) > 0 || len(settings.DbusTalk) > 0 || len(settings.DbusCall) > 0 || len(settings.DbusBroadcast) > 0 {
+		pipe, dbusMount, cleanupFile, err := setupDbusProxy(settings)
+		if len(cleanupFile) > 0 {
+			defer func() {
+				if err := os.Remove(cleanupFile); err != nil {
+					fmt.Printf("Failed to remove temp file %s: %v\n", cleanupFile, err)
+				}
+			}()
+		}
+		if err != nil {
+			fatalErr(err)
+		}
+		settings.SyncFds = append(settings.SyncFds, pipe)
+		mounts = mergeMounts(mounts, []mount{dbusMount})
 	}
-	sort.Slice(mounts, func(i, j int) bool { return mounts[i].Path < mounts[j].Path })
 
 	envVarsFlat := []string{}
 	for key, value := range envVars {
 		envVarsFlat = append(envVarsFlat, key+"="+value)
 	}
 
+	err = run(settings, mounts, envVarsFlat, false)
+	if err != nil {
+		fatalErr(err)
+	}
+}
+
+func run(settings settingsStruct, mounts []mount, environ []string, fork bool) error {
+	if err := validateMounts(mounts); err != nil {
+		fatalErr(err)
+	}
+	sort.Slice(mounts, func(i, j int) bool { return mounts[i].Path < mounts[j].Path })
+
 	fmt.Printf("%v\n", mounts)
 
 	if settings.SandboxBackend == "userns" {
-		err = usernsRun(settings, mounts, envVarsFlat)
+		return usernsRun(settings, mounts, environ, fork)
 	} else {
-		err = bwrapRun(settings, mounts, envVarsFlat)
-	}
-
-	if err != nil {
-		fatalErr(err)
+		return bwrapRun(settings, mounts, environ, fork)
 	}
 }

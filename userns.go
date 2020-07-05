@@ -58,7 +58,7 @@ func decodePassUsernsChild(input []byte) (settingsStruct, []mount, error) {
 	return output.Settings, output.Mounts, nil
 }
 
-func usernsRun(settings settingsStruct, mounts []mount, environ []string) error {
+func usernsRun(settings settingsStruct, mounts []mount, environ []string, fork bool) error {
 	var unshareFlags uintptr = syscall.CLONE_NEWUSER | syscall.CLONE_NEWNS | syscall.CLONE_NEWPID
 	if !settings.Ipc {
 		unshareFlags = unshareFlags | syscall.CLONE_NEWIPC
@@ -78,6 +78,12 @@ func usernsRun(settings settingsStruct, mounts []mount, environ []string) error 
 		return err
 	}
 	defer dataFile.Close()
+
+	for _, fd := range settings.SyncFds {
+		if err := clearCloseOnExec(fd); err != nil {
+			return err
+		}
+	}
 
 	cmd := exec.Cmd{
 		Path:   "/proc/self/exe",
@@ -106,11 +112,12 @@ func usernsRun(settings settingsStruct, mounts []mount, environ []string) error 
 			AmbientCaps:                allCaps,
 		},
 	}
-	if err := cmd.Run(); err != nil {
-		return err
-	}
 
-	return nil
+	if fork {
+		return cmd.Start()
+	} else {
+		return cmd.Run()
+	}
 }
 
 /*func writeStringToFile(filename string, data string) error {
@@ -234,6 +241,12 @@ func usernsChild() error {
 	}
 
 	settings, mounts, _ := decodePassUsernsChild(paramsBytes)
+
+	for _, fd := range settings.SyncFds {
+		if err := setCloseOnExec(fd); err != nil {
+			return fmt.Errorf("failed to clear O_CLOEXEC on fd %d: %w", fd, err)
+		}
+	}
 
 	if err := mountPrivatePropagation(); err != nil {
 		return fmt.Errorf("disabling mount propagation failed: %w", err)

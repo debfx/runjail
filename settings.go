@@ -21,7 +21,12 @@ type settingsStruct struct {
 	Ipc            bool
 	Cwd            string
 	Seccomp        string
+	DbusOwn        []string
+	DbusTalk       []string
+	DbusCall       []string
+	DbusBroadcast  []string
 	Profiles       []string
+	SyncFds        []uintptr
 	Command        []string
 	SandboxBackend string
 }
