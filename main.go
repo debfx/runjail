@@ -167,7 +167,7 @@ func setupDbusProxy(originalSettings settingsStruct) (proxyPipe uintptr, dbusMou
 		return
 	}
 	if bytesRead != 1 {
-		err = fmt.Errorf("failed to initalize dbus proxy, syncing failed")
+		err = fmt.Errorf("failed to initialize dbus proxy, syncing failed")
 		return
 	}
 

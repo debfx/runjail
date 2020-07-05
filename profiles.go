@@ -37,15 +37,15 @@ func getX11Socket() (string, error) {
 	display := os.Getenv("DISPLAY")
 
 	if len(display) == 0 {
-		return "", fmt.Errorf("DISPLAY envrionment variable is not set")
+		return "", fmt.Errorf("DISPLAY environment variable is not set")
 	}
 
 	if len(display) < 2 || display[0] != ':' {
-		return "", fmt.Errorf("DISPLAY envrionment variable is invalid (\"%s\")", display)
+		return "", fmt.Errorf("DISPLAY environment variable is invalid (\"%s\")", display)
 	}
 
 	if _, err := strconv.Atoi(display[1:]); err != nil {
-		return "", fmt.Errorf("DISPLAY envrionment variable is invalid (\"%s\")", display)
+		return "", fmt.Errorf("DISPLAY environment variable is invalid (\"%s\")", display)
 	}
 
 	socketPath := fmt.Sprintf("/tmp/.X11-unix/X%s", display[1:])
