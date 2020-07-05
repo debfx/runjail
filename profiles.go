@@ -16,11 +16,15 @@
 package main
 
 import (
+	"bytes"
 	"encoding/base64"
 	"fmt"
 	"os"
+	"path"
 	"strconv"
 	"strings"
+
+	"github.com/godbus/dbus/v5"
 )
 
 type jailProfile struct {
@@ -75,6 +79,25 @@ func getWaylandSocket() (string, error) {
 	return socketPath, nil
 }
 
+func getPortalDocDir() (string, error) {
+	conn, err := dbus.SessionBus()
+	if err != nil {
+		return "", fmt.Errorf("Failed to connect to session bus: %w", err)
+	}
+	defer conn.Close()
+
+	portalDocuments := conn.Object("org.freedesktop.portal.Documents", "/org/freedesktop/portal/documents")
+
+	var portalDirBytes []byte
+	err = portalDocuments.Call("org.freedesktop.portal.Documents.GetMountPoint", 0).Store(&portalDirBytes)
+	if err != nil {
+		return "", fmt.Errorf("Failed to get portal documents dir: %w", err)
+	}
+	// result is a byte-encoded zero-terminated string
+	portalDirBytesParts := bytes.Split(portalDirBytes, []byte("\x00"))
+	return string(portalDirBytesParts[0]), nil
+}
+
 func getProfile(name string) (jailProfile, error) {
 	profile := jailProfile{
 		EnvVars: map[string]string{},
@@ -109,11 +132,19 @@ func getProfile(name string) (jailProfile, error) {
 			return profile, err
 		}
 
-		flatpakInfo := base64.StdEncoding.EncodeToString([]byte("[Application]\nname=runjail.debfx.github.com\n"))
+		portalDir, err := getPortalDocDir()
+		if err != nil {
+			return profile, err
+		}
 
+		flatpakInfo := base64.StdEncoding.EncodeToString([]byte("[Application]\nname=runjail.debfx.github.com\n"))
 		profile.Mounts = append(profile.Mounts, mount{Path: "/.flatpak-info", Other: flatpakInfo, Type: mountTypeFileData})
 		// compatbility with older flatpak
-		profile.Mounts = append(profile.Mounts, mount{Path: fmt.Sprintf("%s/flatpak-info", runtimeDir), Other: "/.flatpak-info", Type: mountTypeSymlink})
+		profile.Mounts = append(profile.Mounts, mount{Path: path.Join(runtimeDir, "flatpak-info"), Other: "/.flatpak-info", Type: mountTypeSymlink})
+
+		profile.Mounts = append(profile.Mounts, mount{Path: path.Join(runtimeDir, "doc"), Other: path.Join(portalDir, "by-app/runjail.debfx.github.com"), Type: mountTypeBindRw})
+		profile.Mounts = append(profile.Mounts, mount{Path: "/usr/bin/xdg-email", Other: "/usr/libexec/flatpak-xdg-utils/xdg-email", Type: mountTypeBindRo})
+		profile.Mounts = append(profile.Mounts, mount{Path: "/usr/bin/xdg-open", Other: "/usr/libexec/flatpak-xdg-utils/xdg-open", Type: mountTypeBindRo})
 
 		profile.Settings.DbusCall = append(profile.Settings.DbusCall, "org.freedesktop.portal.*=*")
 		profile.Settings.DbusBroadcast = append(profile.Settings.DbusBroadcast, "org.freedesktop.portal.*=@/org/freedesktop/portal/*")
