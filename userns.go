@@ -29,6 +29,7 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/vishvananda/netlink"
 	"golang.org/x/sys/unix"
 )
 
@@ -62,6 +63,9 @@ func usernsRun(settings settingsStruct, mounts []mount, environ []string, fork b
 	var unshareFlags uintptr = syscall.CLONE_NEWUSER | syscall.CLONE_NEWNS | syscall.CLONE_NEWPID
 	if !settings.Ipc {
 		unshareFlags = unshareFlags | syscall.CLONE_NEWIPC
+	}
+	if !settings.Network {
+		unshareFlags = unshareFlags | syscall.CLONE_NEWNET
 	}
 
 	allCaps, err := getAllCaps()
@@ -398,6 +402,17 @@ func usernsChild() error {
 	}
 	if err := syscall.Close(tmpRootFd); err != nil {
 		return fmt.Errorf("failed to close temporary root fd: %w", err)
+	}
+
+	if !settings.Network {
+		// the loopback interface is not up by default but automatically has 127.0.0.1/::1 IPs
+		ifaceLo, err := netlink.LinkByName("lo")
+		if err != nil {
+			return err
+		}
+		if err = netlink.LinkSetUp(ifaceLo); err != nil {
+			return err
+		}
 	}
 
 	if err := dropCapabilities(); err != nil {

@@ -32,6 +32,9 @@ func bwrapRun(settings settingsStruct, mounts []mount, environ []string, fork bo
 	if !settings.Ipc {
 		bwrapArgs = append(bwrapArgs, "--unshare-ipc")
 	}
+	if !settings.Network {
+		bwrapArgs = append(bwrapArgs, "--unshare-net")
+	}
 
 	cwd, err := preprocessPath(settings.Cwd, true)
 	if err != nil {
