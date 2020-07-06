@@ -394,7 +394,7 @@ func usernsChild() error {
 		return fmt.Errorf("failed to chdir into temporary root fd: %w", err)
 	}
 	if err := syscall.Unmount(".", syscall.MNT_DETACH); err != nil {
-		return fmt.Errorf("failed to unmount newroot: %w", err)
+		return fmt.Errorf("failed to unmount temporary root tmpfs: %w", err)
 	}
 
 	if err := os.Chdir("/"); err != nil {
