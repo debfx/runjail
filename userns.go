@@ -290,8 +290,8 @@ func usernsChild() error {
 	}
 
 	for _, mount := range mounts {
-		oldDir := path.Join("oldroot", mount.Other)
-		newDir := path.Join("newroot", mount.Path)
+		oldDir := path.Join("/oldroot", mount.Other)
+		newDir := path.Join("/newroot", mount.Path)
 
 		switch mount.Type {
 		case mountTypeBindRo:
