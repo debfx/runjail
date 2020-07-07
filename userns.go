@@ -282,6 +282,19 @@ func usernsChild() error {
 		return fmt.Errorf("chdir / into temporary root dir failed: %w", err)
 	}
 
+	// create a file and a directory that we can mount over each mountTypeHide entry,
+	// depending on what type it is
+	hideFileFd, err := os.OpenFile("/hidefile", os.O_RDWR|os.O_CREATE|os.O_EXCL, 0000)
+	if err != nil {
+		return fmt.Errorf("creating /hidefile failed: %w", err)
+	}
+	hideFile := hideFileFd.Name()
+	hideFileFd.Close()
+	hideDir := "/hidedir"
+	if err := os.Mkdir(hideDir, 0000); err != nil {
+		return fmt.Errorf("creating /hidedir failed: %w", err)
+	}
+
 	if err := os.Mkdir(path.Join("newroot", "proc"), 0550); err != nil {
 		return fmt.Errorf("creating proc dir failed: %w", err)
 	}
@@ -312,11 +325,20 @@ func usernsChild() error {
 			if settings.Debug {
 				fmt.Printf("Mounting inaccessible tmpfs on %s\n", mount.Path)
 			}
-			if err := os.MkdirAll(newDir, 0700); err != nil {
+
+			newDirInfo, err := os.Stat(newDir)
+			if err != nil {
 				return err
 			}
-			if err := mountTmpfs(newDir, "000", true); err != nil {
-				return err
+
+			if newDirInfo.IsDir() {
+				if err := mountBind(hideDir, newDir, true); err != nil {
+					return err
+				}
+			} else {
+				if err := mountBind(hideFile, newDir, true); err != nil {
+					return err
+				}
 			}
 		case mountTypeEmpty:
 			if settings.Debug {
