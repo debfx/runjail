@@ -46,7 +46,8 @@ var optionFlagMap map[string]int = map[string]int{
 type mountInfoEntry struct {
 	mountId        string
 	parentId       string
-	majorMinor     string
+	major          uint32
+	minor          uint32
 	root           string
 	mountPoint     string
 	mountOptions   string
@@ -108,10 +109,24 @@ func parseMountInfo(pathPrefix string, mountInfoPath string) ([]mountInfoEntry, 
 			return []mountInfoEntry{}, fmt.Errorf("not enough fields after optional")
 		}
 
+		deviceParts := strings.Split(fields[2], ":")
+		if len(deviceParts) != 2 {
+			return []mountInfoEntry{}, fmt.Errorf("invalid major:minor field")
+		}
+		major, err := strconv.ParseUint(deviceParts[0], 10, 32)
+		if err != nil {
+			return []mountInfoEntry{}, fmt.Errorf("invalid major value")
+		}
+		minor, err := strconv.ParseUint(deviceParts[1], 10, 32)
+		if err != nil {
+			return []mountInfoEntry{}, fmt.Errorf("invalid minor value")
+		}
+
 		entry := mountInfoEntry{
 			mountId:        fields[0],
 			parentId:       fields[1],
-			majorMinor:     fields[2],
+			major:          uint32(major),
+			minor:          uint32(minor),
 			root:           fields[3],
 			mountPoint:     fields[4],
 			mountOptions:   fields[5],

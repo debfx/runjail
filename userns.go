@@ -229,6 +229,9 @@ func mountBind(source string, target string, readOnly bool) error {
 	if err := syscall.Mount(source, target, "", syscall.MS_REC|syscall.MS_BIND, ""); err != nil {
 		return err
 	}
+
+	// recursively remount everything beneath the given path
+	// doing that on `target` with MS_REC is not enough
 	if readOnly {
 		mountInfo, err := parseMountInfo(target, "/newroot/proc/self/mountinfo")
 		if err != nil {
@@ -236,6 +239,24 @@ func mountBind(source string, target string, readOnly bool) error {
 		}
 
 		for _, mountEntry := range mountInfo {
+			// skip mountpoints that are shadowed since it's useless and can result in an error
+			// we detect that if the mount path outright doesn't exist or the device number is
+			// different from the mountpoint
+			var mountPointStat unix.Stat_t
+			err = unix.Stat(mountEntry.mountPoint, &mountPointStat)
+			if err != nil {
+				if os.IsNotExist(err) {
+					continue
+				} else {
+					return err
+				}
+			}
+
+			dev := uint64(mountPointStat.Dev)
+			if unix.Major(dev) != mountEntry.major || unix.Minor(dev) != mountEntry.minor {
+				continue
+			}
+
 			if err := remountReadOnly(mountEntry.mountPoint, mountEntry.mountFlags()); err != nil {
 				return err
 			}
