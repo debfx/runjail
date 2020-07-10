@@ -29,6 +29,7 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/docker/docker/pkg/symlink"
 	"github.com/vishvananda/netlink"
 	"golang.org/x/sys/unix"
 )
@@ -199,6 +200,13 @@ func remountReadOnly(path string, existingFlags int) error {
 
 func mountBind(source string, target string, readOnly bool) error {
 	sourceInfo, err := os.Stat(source)
+	if err != nil {
+		return err
+	}
+
+	// mount() would follow symlinks, so resolve the target ourselves with the correct root dir
+	// this has the added advantage that we can try to create the correct parent dirs beforehand
+	target, err = symlink.FollowSymlinkInScope(target, "/newroot")
 	if err != nil {
 		return err
 	}
