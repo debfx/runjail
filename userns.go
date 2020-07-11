@@ -108,8 +108,8 @@ func usernsRun(settings settingsStruct, mounts []mount, environ []string, fork b
 			},
 			GidMappings: []syscall.SysProcIDMap{
 				{
-					ContainerID: os.Getuid(),
-					HostID:      os.Getuid(),
+					ContainerID: os.Getgid(),
+					HostID:      os.Getgid(),
 					Size:        1,
 				},
 			},
