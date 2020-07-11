@@ -390,8 +390,6 @@ func run(settings settingsStruct, mounts []mount, environ []string, fork bool) e
 	}
 	sort.Slice(mounts, func(i, j int) bool { return mounts[i].Path < mounts[j].Path })
 
-	fmt.Printf("%v\n", mounts)
-
 	if settings.SandboxBackend == "userns" {
 		return usernsRun(settings, mounts, environ, fork)
 	} else {
