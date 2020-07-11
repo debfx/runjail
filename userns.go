@@ -119,10 +119,15 @@ func usernsRun(settings settingsStruct, mounts []mount, environ []string, fork b
 	}
 
 	if fork {
-		return cmd.Start()
+		err = cmd.Start()
 	} else {
-		return cmd.Run()
+		err = cmd.Run()
 	}
+	if err != nil {
+		return fmt.Errorf("failed to start runjail in new namespace: %w", err)
+	}
+
+	return nil
 }
 
 /*func writeStringToFile(filename string, data string) error {
