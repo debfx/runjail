@@ -1,0 +1,14 @@
+#!/bin/sh
+
+set -eu
+
+writeFile() {
+  echo "$2" | tee "$1" > /dev/null
+}
+
+cat data/ro/file
+
+if writeFile data/ro/file XXX 2>/dev/null; then
+  echo "Error: writing to read-only file worked" > /dev/stderr
+  exit 1
+fi

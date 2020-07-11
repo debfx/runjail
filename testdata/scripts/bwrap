@@ -1,0 +1,5 @@
+#!/bin/sh
+
+set -eu
+
+readlink /proc/1/exe
