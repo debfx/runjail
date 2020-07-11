@@ -305,6 +305,15 @@ func main() {
 		settings.Command = flag.Args()
 	}
 
+	settings.Command[0], err = exec.LookPath(settings.Command[0])
+	if err != nil {
+		fatalErr(fmt.Errorf("executable does not exist: %w", err))
+	}
+	settings.Command[0], err = preprocessPath(settings.Command[0], true)
+	if err != nil {
+		fatalErr(err)
+	}
+
 	settings.Cwd, err = preprocessPath(settings.Cwd, false)
 	if err != nil {
 		fatalErr(err)
