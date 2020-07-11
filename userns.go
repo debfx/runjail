@@ -29,7 +29,7 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/docker/docker/pkg/symlink"
+	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/vishvananda/netlink"
 	"golang.org/x/sys/unix"
 )
@@ -204,13 +204,6 @@ func mountBind(source string, target string, readOnly bool) error {
 		return err
 	}
 
-	// mount() would follow symlinks, so resolve the target ourselves with the correct root dir
-	// this has the added advantage that we can try to create the correct parent dirs beforehand
-	target, err = symlink.FollowSymlinkInScope(target, "/newroot")
-	if err != nil {
-		return err
-	}
-
 	if sourceInfo.IsDir() {
 		if err := os.MkdirAll(target, 0700); err != nil {
 			return err
@@ -333,26 +326,35 @@ func usernsChild() error {
 
 	for _, mount := range mounts {
 		oldDir := path.Join("/oldroot", mount.Other)
-		newDir := path.Join("/newroot", mount.Path)
+		// mount() would follow symlinks, so resolve the target ourselves with the correct root dir
+		// this has the added advantage that we can try to create the correct parent dirs beforehand
+		newDir, err := securejoin.SecureJoin("/newroot", mount.Path)
+		if err != nil {
+			return err
+		}
+		newDirRelative := newDir[8:]
+		if settings.Debug && path.Join("/newroot", mount.Path) != newDir {
+			fmt.Printf("Changing mount target from %s to %s\n", mount.Path, newDirRelative)
+		}
 
 		switch mount.Type {
 		case mountTypeBindRo:
 			if settings.Debug {
-				fmt.Printf("Bind-mounting (read-only) %s on %s\n", mount.Other, mount.Path)
+				fmt.Printf("Bind-mounting (read-only) %s on %s\n", mount.Other, newDirRelative)
 			}
 			if err := mountBind(oldDir, newDir, true); err != nil {
 				return err
 			}
 		case mountTypeBindRw:
 			if settings.Debug {
-				fmt.Printf("Bind-mounting %s on %s\n", mount.Other, mount.Path)
+				fmt.Printf("Bind-mounting %s on %s\n", mount.Other, newDirRelative)
 			}
 			if err := mountBind(oldDir, newDir, false); err != nil {
 				return err
 			}
 		case mountTypeHide:
 			if settings.Debug {
-				fmt.Printf("Mounting inaccessible tmpfs on %s\n", mount.Path)
+				fmt.Printf("Mounting inaccessible tmpfs on %s\n", newDirRelative)
 			}
 
 			newDirInfo, err := os.Stat(newDir)
@@ -371,7 +373,7 @@ func usernsChild() error {
 			}
 		case mountTypeEmpty:
 			if settings.Debug {
-				fmt.Printf("Mounting empty tmpfs on %s\n", mount.Path)
+				fmt.Printf("Mounting empty tmpfs on %s\n", newDirRelative)
 			}
 			if err := os.MkdirAll(newDir, 0700); err != nil {
 				return fmt.Errorf("creating directory failed: %w", err)
@@ -381,7 +383,7 @@ func usernsChild() error {
 			}
 		case mountTypeSymlink:
 			if settings.Debug {
-				fmt.Printf("Creating symlink %s -> %s\n", mount.Path, mount.Other)
+				fmt.Printf("Creating symlink %s -> %s\n", newDirRelative, mount.Other)
 			}
 			if err := os.MkdirAll(filepath.Dir(newDir), 0700); err != nil {
 				return fmt.Errorf("creating directory failed: %w", err)
@@ -392,7 +394,7 @@ func usernsChild() error {
 			}
 		case mountTypeFileData:
 			if settings.Debug {
-				fmt.Printf("Creating %s from data file\n", mount.Path)
+				fmt.Printf("Creating %s from data file\n", newDirRelative)
 			}
 
 			tmpFile, err := ioutil.TempFile("/", "bindfile")

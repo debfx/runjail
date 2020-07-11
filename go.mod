@@ -3,9 +3,9 @@ module github.com/debfx/runjail
 go 1.13
 
 require (
-	github.com/docker/docker v1.13.1
-	github.com/docker/go-units v0.4.0 // indirect
+	github.com/cyphar/filepath-securejoin v0.2.2
 	github.com/godbus/dbus/v5 v5.0.3
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/seccomp/libseccomp-golang v0.9.1
 	github.com/spf13/pflag v1.0.5
 	github.com/vishvananda/netlink v1.1.0
