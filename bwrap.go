@@ -129,7 +129,7 @@ func bwrapRun(settings settingsStruct, mounts []mount, environ []string, fork bo
 	}
 	defer bwrapArgsDataFile.Close()
 
-	execArgs := append([]string{"bwrap"}, "--args", strconv.Itoa(int(bwrapArgsDataFile.Fd())), "--")
+	execArgs := append([]string{"bwrap"}, "--args", strconv.Itoa(int(bwrapArgsDataFile.Fd())))
 	execArgs = append(execArgs, settings.Command...)
 
 	if fork {
