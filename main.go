@@ -278,10 +278,7 @@ func main() {
 		}
 	}
 	if flag.Lookup("cwd").Changed {
-		settings.Cwd, err = preprocessPath(*flagCwd, false)
-		if err != nil {
-			fatalErr(err)
-		}
+		settings.Cwd = *flagCwd
 	}
 	if flag.Lookup("seccomp").Changed {
 		settings.Seccomp = *flagSeccomp
@@ -306,6 +303,11 @@ func main() {
 
 	if len(flag.Args()) != 0 {
 		settings.Command = flag.Args()
+	}
+
+	settings.Cwd, err = preprocessPath(settings.Cwd, false)
+	if err != nil {
+		fatalErr(err)
 	}
 
 	flagRawMountOptions := rawMountOptions{
