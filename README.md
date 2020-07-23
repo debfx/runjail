@@ -70,8 +70,10 @@ Usage of runjail:
 # Requirements
 
 runjail is tested on Linux >= 4.19
+
 It uses unprvileged user namespaces which is disabled by default on some
 distributions.
+
 To enable it on Debian the sysctl `kernel.unprivileged_userns_clone` needs
 to be set to `1`.
 
@@ -80,5 +82,5 @@ to be set to `1`.
 
 Golang >= 1.13 and the development files for libseccomp are required.
 
-runjail can be built by running `go build` inside the Git checkout or with
+runjail can be built by running `go build` inside a Git checkout or with
 `go get -u github.com/debfx/runjail`
