@@ -289,8 +289,6 @@ func validateMounts(mounts []mount) error {
 	hideMounts := []string{}
 	symlinkMounts := []string{}
 
-	// TODO check if mounts exists (e.g. hide, bind source etc)
-
 	for _, mount := range mounts {
 		if mount.Type == mountTypeHide {
 			hideMounts = append(hideMounts, mount.Path)
