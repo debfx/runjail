@@ -206,6 +206,11 @@ func main() {
 
 	expandedArgs := expandCmdFlags()
 
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "usage: %s [--flag [--flag ...]] -- [command [command ...]]:\n", os.Args[0])
+		flag.PrintDefaults()
+	}
+
 	// Ignore errors; CommandLine is set for ExitOnError.
 	flag.CommandLine.Parse(expandedArgs)
 

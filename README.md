@@ -38,7 +38,7 @@ the parameter `-nolisten local`.
 # Usage
 
 ```
-Usage of runjail:
+usage: runjail [--flag [--flag ...]] -- [command [command ...]]:
 --backend string    Backend for sandbox (userns/bwrap). (default "userns")
 --bind-ro strings   Bind mount source file/directory from parent namespace to target read-only (Format: "source:target").
 --bind-rw strings   Bind mount source file/directory from parent namespace to target read-write (Format: "source:target").
