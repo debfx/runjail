@@ -184,6 +184,11 @@ func main() {
 		fatalErr(usernsChild())
 	}
 
+	if os.Getuid() == 0 {
+		fmt.Println("runjail only supports being run by an unprivileged users")
+		os.Exit(1)
+	}
+
 	flagRo := flag.StringSlice("ro", []string{}, "Mount file/directory from parent namespace read-only.")
 	flagRw := flag.StringSlice("rw", []string{}, "Mount file/directory from parent namespace read-write.")
 	flagHide := flag.StringSlice("hide", []string{}, "Make file/directory inaccessible.")
