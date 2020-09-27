@@ -261,6 +261,12 @@ func main() {
 		if config.Ipc != nil {
 			settings.Ipc = *config.Ipc
 		}
+		if config.Network != "" {
+			settings.Network, err = yesNoStrToBool(config.Network)
+			if err != nil {
+				fatalErr(err)
+			}
+		}
 		if config.Cwd != "" {
 			settings.Cwd = config.Cwd
 		}
@@ -279,6 +285,11 @@ func main() {
 		if config.Backend != "" {
 			settings.SandboxBackend = config.Backend
 		}
+
+		settings.DbusOwn = append(settings.DbusOwn, config.DbusOwn...)
+		settings.DbusTalk = append(settings.DbusTalk, config.DbusTalk...)
+		settings.DbusCall = append(settings.DbusCall, config.DbusCall...)
+		settings.DbusBroadcast = append(settings.DbusBroadcast, config.DbusBroadcast...)
 	}
 
 	if flag.Lookup("debug").Changed {

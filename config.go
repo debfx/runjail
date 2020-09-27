@@ -24,19 +24,24 @@ import (
 type StringArray []string
 
 type configStruct struct {
-	Ro          StringArray       `yaml:"ro"`
-	Rw          StringArray       `yaml:"rw"`
-	Hide        StringArray       `yaml:"hide"`
-	Empty       StringArray       `yaml:"empty"`
-	BindRo      map[string]string `yaml:"bind_ro"`
-	BindRw      map[string]string `yaml:"bind_rw"`
-	Ipc         *bool             `yaml:"ipc"`
-	Cwd         string            `yaml:"cwd"`
-	Seccomp     string            `yaml:"seccomp"`
-	Profiles    StringArray       `yaml:"profiles"`
-	FlatpakName string            `yaml:"flatpak_name"`
-	Command     StringArray       `yaml:"command"`
-	Backend     string            `yaml:"backend"`
+	Ro            StringArray       `yaml:"ro"`
+	Rw            StringArray       `yaml:"rw"`
+	Hide          StringArray       `yaml:"hide"`
+	Empty         StringArray       `yaml:"empty"`
+	BindRo        map[string]string `yaml:"bind_ro"`
+	BindRw        map[string]string `yaml:"bind_rw"`
+	Network       string            `yaml:"network"`
+	Ipc           *bool             `yaml:"ipc"`
+	DbusOwn       []string          `yaml:"dbus_own"`
+	DbusTalk      []string          `yaml:"dbus_talk"`
+	DbusCall      []string          `yaml:"dbus_call"`
+	DbusBroadcast []string          `yaml:"dbus_broadcast"`
+	Cwd           string            `yaml:"cwd"`
+	Seccomp       string            `yaml:"seccomp"`
+	Profiles      StringArray       `yaml:"profiles"`
+	FlatpakName   string            `yaml:"flatpak_name"`
+	Command       StringArray       `yaml:"command"`
+	Backend       string            `yaml:"backend"`
 }
 
 // parse yaml array as slice
