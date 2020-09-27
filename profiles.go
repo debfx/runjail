@@ -98,7 +98,7 @@ func getPortalDocDir() (string, error) {
 	return string(portalDirBytesParts[0]), nil
 }
 
-func getProfile(name string) (jailProfile, error) {
+func getProfile(name string, settings settingsStruct) (jailProfile, error) {
 	profile := jailProfile{
 		EnvVars: map[string]string{},
 		Mounts:  []mount{},
@@ -127,6 +127,10 @@ func getProfile(name string) (jailProfile, error) {
 		profile.Mounts = append(profile.Mounts, mount{Path: fmt.Sprintf("%s/wayland-0", runtimeDir), Other: waylandSocket, Type: mountTypeBindRw})
 		profile.EnvVars["WAYLAND_DISPLAY"] = "wayland-0"
 	case "flatpak":
+		if settings.FlatpakName == "" {
+			return profile, fmt.Errorf("flatpak profile requires a flatpak_name config")
+		}
+
 		runtimeDir, err := getUserRuntimeDir()
 		if err != nil {
 			return profile, err
@@ -137,12 +141,14 @@ func getProfile(name string) (jailProfile, error) {
 			return profile, err
 		}
 
-		flatpakInfo := base64.StdEncoding.EncodeToString([]byte("[Application]\nname=runjail.debfx.github.com\n"))
+		desktopFileContent := fmt.Sprintf("[Application]\nname=%s\n", settings.FlatpakName)
+		flatpakInfo := base64.StdEncoding.EncodeToString([]byte(desktopFileContent))
+
 		profile.Mounts = append(profile.Mounts, mount{Path: "/.flatpak-info", Other: flatpakInfo, Type: mountTypeFileData})
 		// compatbility with older flatpak
 		profile.Mounts = append(profile.Mounts, mount{Path: path.Join(runtimeDir, "flatpak-info"), Other: "/.flatpak-info", Type: mountTypeSymlink})
 
-		profile.Mounts = append(profile.Mounts, mount{Path: path.Join(runtimeDir, "doc"), Other: path.Join(portalDir, "by-app/runjail.debfx.github.com"), Type: mountTypeBindRw})
+		profile.Mounts = append(profile.Mounts, mount{Path: path.Join(runtimeDir, "doc"), Other: path.Join(portalDir, "by-app", settings.FlatpakName), Type: mountTypeBindRw})
 		profile.Mounts = append(profile.Mounts, mount{Path: "/usr/bin/xdg-email", Other: "/usr/libexec/flatpak-xdg-utils/xdg-email", Type: mountTypeBindRo})
 		profile.Mounts = append(profile.Mounts, mount{Path: "/usr/bin/xdg-open", Other: "/usr/libexec/flatpak-xdg-utils/xdg-open", Type: mountTypeBindRo})
 

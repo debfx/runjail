@@ -270,6 +270,9 @@ func main() {
 		if len(config.Profiles) != 0 {
 			settings.Profiles = config.Profiles
 		}
+		if config.FlatpakName != "" {
+			settings.FlatpakName = config.FlatpakName
+		}
 		if len(config.Command) != 0 {
 			settings.Command = config.Command
 		}
@@ -364,7 +367,7 @@ func main() {
 		envVars[splits[0]] = splits[1]
 	}
 	for _, profileName := range settings.Profiles {
-		profile, err := getProfile(profileName)
+		profile, err := getProfile(profileName, settings)
 		if err != nil {
 			fatalErr(err)
 		}
