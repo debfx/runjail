@@ -128,8 +128,10 @@ func setupDbusProxy(originalSettings settingsStruct) (proxyPipe uintptr, dbusMou
 		dbusProxyArgs = append(dbusProxyArgs, "--broadcast="+name)
 	}
 
-	printCmdArgs := strings.Join(dbusProxyArgs, " ")
-	fmt.Fprintf(os.Stderr, "Running: dbus-proxy %s\n", printCmdArgs)
+	if originalSettings.Debug {
+		printCmdArgs := strings.Join(dbusProxyArgs, " ")
+		fmt.Fprintf(os.Stderr, "Running: dbus-proxy %s\n", printCmdArgs)
+	}
 
 	argsFile, err := getDataFileBytes(append([]byte(strings.Join(dbusProxyArgs, "\x00")), []byte("\x00")...))
 	if err != nil {
