@@ -252,6 +252,9 @@ func main() {
 		}
 		configMountOptions, err = parseRawMountOptions(configRawMountOptions)
 		if err != nil {
+			if pathErr, ok := err.(*os.PathError); ok && os.IsNotExist(err) {
+				fatal(fmt.Sprintf("the specified path in the config does not exist: %s", pathErr.Path))
+			}
 			fatalErr(err)
 		}
 
@@ -348,6 +351,9 @@ func main() {
 
 	flagMountOptions, err := parseRawMountOptions(flagRawMountOptions)
 	if err != nil {
+		if pathErr, ok := err.(*os.PathError); ok && os.IsNotExist(err) {
+			fatal(fmt.Sprintf("the specified path on the command line does not exist: %s", pathErr.Path))
+		}
 		fatalErr(err)
 	}
 
