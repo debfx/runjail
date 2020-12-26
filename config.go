@@ -31,6 +31,7 @@ type configStruct struct {
 	BindRo        map[string]string `yaml:"bind_ro"`
 	BindRw        map[string]string `yaml:"bind_rw"`
 	Network       string            `yaml:"network"`
+	AllowedHosts  []string          `yaml:"allowed_hosts"`
 	Ipc           *bool             `yaml:"ipc"`
 	DbusOwn       []string          `yaml:"dbus_own"`
 	DbusTalk      []string          `yaml:"dbus_talk"`

@@ -4,6 +4,8 @@ go 1.13
 
 require (
 	github.com/cyphar/filepath-securejoin v0.2.2
+	github.com/elazarl/goproxy v0.0.0-20200809112317-0581fc3aee2d
+	github.com/gobwas/glob v0.2.3
 	github.com/godbus/dbus/v5 v5.0.3
 	github.com/otiai10/copy v1.2.0
 	github.com/pkg/errors v0.9.1 // indirect

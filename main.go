@@ -73,9 +73,28 @@ func expandCmdFlags() []string {
 func main() {
 	var err error
 
-	// internal subcommand
-	if len(os.Args) > 1 && os.Args[1] == "userns-child" {
-		fatalErr(usernsChild())
+	// internal subcommands
+	if len(os.Args) > 2 {
+		if os.Args[1] == "userns-child" {
+			fatalErr(usernsChild())
+		} else if os.Args[1] == "http-proxy" {
+			err = runHttpProxy()
+			if err != nil {
+				fatalErr(err)
+			}
+			return
+		} else if os.Args[1] == "http-proxy-wrapper" {
+			fatalErr(runHttpProxyWrapper())
+		}
+	}
+	if len(os.Args) > 1 {
+		if os.Args[1] == "http-proxy-forwarder" {
+			err = runHttpProxyForwarder()
+			if err != nil {
+				fatalErr(err)
+			}
+			return
+		}
 	}
 
 	if os.Getuid() == 0 {
@@ -160,6 +179,9 @@ func main() {
 			if err != nil {
 				fatalErr(err)
 			}
+		}
+		if len(config.AllowedHosts) != 0 {
+			settings.AllowedHosts = config.AllowedHosts
 		}
 		if config.Cwd != "" {
 			settings.Cwd = config.Cwd
@@ -306,6 +328,30 @@ func main() {
 		}
 		settings.SyncFds = append(settings.SyncFds, pipe)
 		mounts = mergeMounts(mounts, []mount{dbusMount})
+	}
+
+	if len(settings.AllowedHosts) > 0 {
+		err = validateAllowedHosts(settings)
+		if err != nil {
+			fatalErr(err)
+		}
+
+		pipe, proxyMount, cleanupFile, err := setupHttpProxy(settings)
+		if len(cleanupFile) > 0 {
+			defer func() {
+				if err := os.Remove(cleanupFile); err != nil {
+					fmt.Printf("Failed to remove temp file %s: %v\n", cleanupFile, err)
+				}
+			}()
+		}
+		if err != nil {
+			fatalErr(err)
+		}
+		settings.SyncFds = append(settings.SyncFds, pipe)
+		settings.Command = append([]string{"/proc/self/exe", "http-proxy-wrapper"}, settings.Command...)
+		mounts = mergeMounts(mounts, []mount{proxyMount})
+		envVars["http_proxy"] = "http://localhost:18080/"
+		envVars["https_proxy"] = "http://localhost:18080/"
 	}
 
 	envVarsFlat := []string{}

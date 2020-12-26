@@ -18,6 +18,7 @@ package main
 type settingsStruct struct {
 	Debug          bool
 	Network        bool
+	AllowedHosts   []string
 	Ipc            bool
 	Cwd            string
 	Seccomp        string
