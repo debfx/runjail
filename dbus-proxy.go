@@ -81,6 +81,7 @@ func setupDbusProxy(originalSettings settingsStruct) (proxyPipe uintptr, dbusMou
 	}
 
 	if originalSettings.Debug {
+		dbusProxyArgs = append(dbusProxyArgs, "--log")
 		printCmdArgs := strings.Join(dbusProxyArgs, " ")
 		fmt.Fprintf(os.Stderr, "Running: dbus-proxy %s\n", printCmdArgs)
 	}
