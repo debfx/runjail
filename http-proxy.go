@@ -141,6 +141,7 @@ func setupHttpProxy(originalSettings settingsStruct) (proxyPipe uintptr, proxyMo
 	settings := getDefaultSettings()
 	settings.Cwd = "/"
 	settings.Command = []string{"/proc/self/exe", "http-proxy", strconv.Itoa(int(dataFile.Fd()))}
+	settings.OverrideArg0 = os.Args[0]
 	settings.Network = true
 	settings.Debug = originalSettings.Debug
 	settings.SandboxBackend = originalSettings.SandboxBackend
@@ -300,7 +301,7 @@ func runHttpProxyForwarder() error {
 func runHttpProxyWrapper() error {
 	cmd := exec.Cmd{
 		Path:   "/proc/self/exe",
-		Args:   []string{"/proc/self/exe", "http-proxy-forwarder"},
+		Args:   []string{os.Args[0], "http-proxy-forwarder"},
 		Stdin:  os.Stdin,
 		Stdout: os.Stdout,
 		Stderr: os.Stderr,

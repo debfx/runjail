@@ -92,7 +92,7 @@ func usernsRun(settings settingsStruct, mounts []mount, environ []string, fork b
 
 	cmd := exec.Cmd{
 		Path:   "/proc/self/exe",
-		Args:   []string{"/proc/self/exe", "userns-child", strconv.Itoa(int(dataFile.Fd()))},
+		Args:   []string{os.Args[0], "userns-child", strconv.Itoa(int(dataFile.Fd()))},
 		Stdin:  os.Stdin,
 		Stdout: os.Stdout,
 		Stderr: os.Stderr,
@@ -500,6 +500,10 @@ func usernsChild() error {
 	executable, err := exec.LookPath(settings.Command[0])
 	if err != nil {
 		return fmt.Errorf("executable does not exist: %w", err)
+	}
+
+	if len(settings.OverrideArg0) > 0 {
+		settings.Command[0] = settings.OverrideArg0
 	}
 
 	if err := syscall.Exec(executable, settings.Command, os.Environ()); err != nil {

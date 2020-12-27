@@ -349,6 +349,7 @@ func main() {
 		}
 		settings.SyncFds = append(settings.SyncFds, pipe)
 		settings.Command = append([]string{"/proc/self/exe", "http-proxy-wrapper"}, settings.Command...)
+		settings.OverrideArg0 = os.Args[0]
 		mounts = mergeMounts(mounts, []mount{proxyMount})
 		envVars["http_proxy"] = "http://localhost:18080/"
 		envVars["https_proxy"] = "http://localhost:18080/"

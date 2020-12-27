@@ -30,6 +30,7 @@ type settingsStruct struct {
 	FlatpakName    string
 	SyncFds        []uintptr
 	Command        []string
+	OverrideArg0   string
 	SandboxBackend string
 }
 
