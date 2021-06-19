@@ -115,7 +115,6 @@ func main() {
 	flagSeccomp := flag.String("seccomp", "yes", "Enable seccomp syscall filtering (yes/minimal/no).")
 	flagProfile := flag.StringSlice("profile", []string{}, "Enable predefined profiles (x11/wayland/flatpak).")
 	flagConfig := flag.String("config", "", "Fetch options from config file.")
-	flagBackend := flag.String("backend", "userns", "Backend for sandbox (userns/bwrap).")
 
 	expandedArgs := expandCmdFlags()
 
@@ -198,9 +197,6 @@ func main() {
 		if len(config.Command) != 0 {
 			settings.Command = config.Command
 		}
-		if config.Backend != "" {
-			settings.SandboxBackend = config.Backend
-		}
 
 		settings.DbusOwn = append(settings.DbusOwn, config.DbusOwn...)
 		settings.DbusTalk = append(settings.DbusTalk, config.DbusTalk...)
@@ -235,13 +231,6 @@ func main() {
 		for _, profileArg := range *flagProfile {
 			settings.Profiles = append(settings.Profiles, strings.Split(profileArg, ",")...)
 		}
-	}
-
-	if flag.Lookup("backend").Changed {
-		settings.SandboxBackend = *flagBackend
-	}
-	if settings.SandboxBackend != "userns" && settings.SandboxBackend != "bwrap" {
-		fatal(fmt.Sprintf("\"%s\" is not a valid sandbox backend", settings.SandboxBackend))
 	}
 
 	if len(flag.Args()) != 0 {
@@ -372,9 +361,5 @@ func run(settings settingsStruct, mounts []mount, environ []string, fork bool) e
 	}
 	sort.Slice(mounts, func(i, j int) bool { return mounts[i].Path < mounts[j].Path })
 
-	if settings.SandboxBackend == "userns" {
-		return usernsRun(settings, mounts, environ, fork)
-	} else {
-		return bwrapRun(settings, mounts, environ, fork)
-	}
+	return usernsRun(settings, mounts, environ, fork)
 }
