@@ -102,14 +102,3 @@ func TestBindRo(t *testing.T) {
 	assertNil(t, err)
 	assertEqual(t, "rotest", stdout)
 }
-
-func TestBwrap(t *testing.T) {
-	bwrapBin, err := exec.LookPath("bwrap")
-	if err != nil {
-		t.Skip("bwrap not found")
-	}
-
-	stdout, err := runTest("bwrap", []string{"--backend", "bwrap"})
-	assertNil(t, err)
-	assertEqual(t, bwrapBin, stdout)
-}
