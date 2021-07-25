@@ -29,23 +29,72 @@ type lineFunc func(line []byte) (v interface{}, err error)
 // readColonFile parses r as an /etc/group or /etc/passwd style file, running
 // fn for each row. readColonFile returns a value, an error, or (nil, nil) if
 // the end of the file is reached without a match.
-func readColonFile(r io.Reader, fn lineFunc) (v interface{}, err error) {
-	bs := bufio.NewScanner(r)
-	for bs.Scan() {
-		line := bs.Bytes()
+//
+// readCols is the minimum number of colon-separated fields that will be passed
+// to fn; in a long line additional fields may be silently discarded.
+func readColonFile(r io.Reader, fn lineFunc, readCols int) (v interface{}, err error) {
+	rd := bufio.NewReader(r)
+
+	// Read the file line-by-line.
+	for {
+		var isPrefix bool
+		var wholeLine []byte
+
+		// Read the next line. We do so in chunks (as much as reader's
+		// buffer is able to keep), check if we read enough columns
+		// already on each step and store final result in wholeLine.
+		for {
+			var line []byte
+			line, isPrefix, err = rd.ReadLine()
+
+			if err != nil {
+				// We should return (nil, nil) if EOF is reached
+				// without a match.
+				if err == io.EOF {
+					err = nil
+				}
+				return nil, err
+			}
+
+			// Simple common case: line is short enough to fit in a
+			// single reader's buffer.
+			if !isPrefix && len(wholeLine) == 0 {
+				wholeLine = line
+				break
+			}
+
+			wholeLine = append(wholeLine, line...)
+
+			// Check if we read the whole line (or enough columns)
+			// already.
+			if !isPrefix || bytes.Count(wholeLine, []byte{':'}) >= readCols {
+				break
+			}
+		}
+
 		// There's no spec for /etc/passwd or /etc/group, but we try to follow
 		// the same rules as the glibc parser, which allows comments and blank
 		// space at the beginning of a line.
-		line = bytes.TrimSpace(line)
-		if len(line) == 0 || line[0] == '#' {
+		wholeLine = bytes.TrimSpace(wholeLine)
+		if len(wholeLine) == 0 || wholeLine[0] == '#' {
 			continue
 		}
-		v, err = fn(line)
+		v, err = fn(wholeLine)
 		if v != nil || err != nil {
 			return
 		}
+
+		// If necessary, skip the rest of the line
+		for ; isPrefix; _, isPrefix, err = rd.ReadLine() {
+			if err != nil {
+				// We should return (nil, nil) if EOF is reached without a match.
+				if err == io.EOF {
+					err = nil
+				}
+				return nil, err
+			}
+		}
 	}
-	return nil, bs.Err()
 }
 
 // returns a *User for a row if that row's has the given value at the
@@ -97,7 +146,7 @@ func findUserId(uid string, r io.Reader) (*unixUser, error) {
 	if e != nil {
 		return nil, errors.New("user: invalid userid " + uid)
 	}
-	if v, err := readColonFile(r, matchUserIndexValue(uid, 2)); err != nil {
+	if v, err := readColonFile(r, matchUserIndexValue(uid, 2), 7); err != nil {
 		return nil, err
 	} else if v != nil {
 		return v.(*unixUser), nil
