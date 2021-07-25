@@ -146,7 +146,7 @@ func setupHttpProxy(originalSettings settingsStruct) (proxyPipe uintptr, proxyMo
 	settings.Debug = originalSettings.Debug
 	settings.SandboxBackend = originalSettings.SandboxBackend
 
-	err = run(settings, mountOptions, os.Environ(), true)
+	_, err = run(settings, mountOptions, os.Environ(), true)
 	if err != nil {
 		return
 	}

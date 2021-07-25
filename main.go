@@ -76,7 +76,11 @@ func main() {
 	// internal subcommands
 	if len(os.Args) > 2 {
 		if os.Args[1] == "userns-child" {
-			fatalErr(usernsChild())
+			exitCode, err := usernsChild()
+			if err != nil {
+				fatalErr(err)
+			}
+			os.Exit(exitCode)
 		} else if os.Args[1] == "http-proxy" {
 			err = runHttpProxy()
 			if err != nil {
@@ -349,13 +353,15 @@ func main() {
 		envVarsFlat = append(envVarsFlat, key+"="+value)
 	}
 
-	err = run(settings, mounts, envVarsFlat, false)
+	exitCode, err := run(settings, mounts, envVarsFlat, false)
 	if err != nil {
 		fatalErr(err)
 	}
+
+	os.Exit(exitCode)
 }
 
-func run(settings settingsStruct, mounts []mount, environ []string, fork bool) error {
+func run(settings settingsStruct, mounts []mount, environ []string, fork bool) (int, error) {
 	if err := validateMounts(mounts); err != nil {
 		fatalErr(err)
 	}

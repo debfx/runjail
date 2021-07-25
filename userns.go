@@ -23,6 +23,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path"
 	"path/filepath"
 	"strconv"
@@ -60,7 +61,7 @@ func decodePassUsernsChild(input []byte) (settingsStruct, []mount, error) {
 	return output.Settings, output.Mounts, nil
 }
 
-func usernsRun(settings settingsStruct, mounts []mount, environ []string, fork bool) error {
+func usernsRun(settings settingsStruct, mounts []mount, environ []string, fork bool) (int, error) {
 	var unshareFlags uintptr = syscall.CLONE_NEWUSER | syscall.CLONE_NEWNS | syscall.CLONE_NEWPID
 	if !settings.Ipc {
 		unshareFlags = unshareFlags | syscall.CLONE_NEWIPC
@@ -71,22 +72,22 @@ func usernsRun(settings settingsStruct, mounts []mount, environ []string, fork b
 
 	allCaps, err := getAllCaps()
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	encodedParams, err := encodePassUsernsChild(settings, mounts)
 	if err != nil {
-		return fmt.Errorf("failed to serialize settings: %w", err)
+		return 0, fmt.Errorf("failed to serialize settings: %w", err)
 	}
 	dataFile, err := getDataFileBytes(encodedParams)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	defer dataFile.Close()
 
 	for _, fd := range settings.SyncFds {
 		if err := clearCloseOnExec(fd); err != nil {
-			return err
+			return 0, err
 		}
 	}
 
@@ -124,10 +125,13 @@ func usernsRun(settings settingsStruct, mounts []mount, environ []string, fork b
 		err = cmd.Run()
 	}
 	if err != nil {
-		return fmt.Errorf("failed to start runjail in new namespace: %w", err)
+		if exitErr, isExitErr := err.(*exec.ExitError); isExitErr {
+			return exitErr.ProcessState.ExitCode(), nil
+		}
+		return 0, fmt.Errorf("failed to start runjail in new namespace: %w", err)
 	}
 
-	return nil
+	return 0, nil
 }
 
 /*func writeStringToFile(filename string, data string) error {
@@ -263,70 +267,122 @@ func mountBind(source string, target string, readOnly bool) error {
 	return nil
 }
 
-func usernsChild() error {
+func sigChildHandler(notifications chan os.Signal) {
+	var sigs = make(chan os.Signal, 3)
+	signal.Notify(sigs, syscall.SIGCHLD)
+
+	for {
+		var sig = <-sigs
+		select {
+		case notifications <- sig: /*  published it.  */
+		default:
+			/*
+			 *  Notifications channel full - drop it to the
+			 *  floor. This ensures we don't fill up the SIGCHLD
+			 *  queue. The reaper just waits for any child
+			 *  process (pid=-1), so we ain't loosing it.
+			 */
+		}
+	}
+}
+
+func reapChildren(childPid int) int {
+	var notifications = make(chan os.Signal, 1)
+
+	go sigChildHandler(notifications)
+
+	for {
+		<-notifications
+		for {
+			var wstatus syscall.WaitStatus
+
+			// reap any terminated child
+			diedPid, err := syscall.Wait4(-1, &wstatus, 0, nil)
+			for err == syscall.EINTR {
+				diedPid, err = syscall.Wait4(-1, &wstatus, 0, nil)
+			}
+
+			if err == syscall.ECHILD {
+				// no more children to wait upon
+				break
+			}
+
+			if err == nil && diedPid == childPid {
+				if wstatus.Exited() {
+					return wstatus.ExitStatus()
+				} else if wstatus.Signaled() {
+					return 128 + int(wstatus.Signal())
+				}
+				return 255
+			}
+		}
+	}
+}
+
+func usernsChild() (int, error) {
 	dataFd, _ := strconv.Atoi(os.Args[2])
 	dataFile := os.NewFile(uintptr(dataFd), "")
 	paramsBytes, _ := ioutil.ReadAll(dataFile)
 	if err := dataFile.Close(); err != nil {
-		return fmt.Errorf("failed to close the parameters file: %w", err)
+		return 0, fmt.Errorf("failed to close the parameters file: %w", err)
 	}
 
 	settings, mounts, _ := decodePassUsernsChild(paramsBytes)
 
 	for _, fd := range settings.SyncFds {
 		if err := setCloseOnExec(fd); err != nil {
-			return fmt.Errorf("failed to clear O_CLOEXEC on fd %d: %w", fd, err)
+			return 0, fmt.Errorf("failed to clear O_CLOEXEC on fd %d: %w", fd, err)
 		}
 	}
 
 	if err := mountPrivatePropagation(); err != nil {
-		return fmt.Errorf("disabling mount propagation failed: %w", err)
+		return 0, fmt.Errorf("disabling mount propagation failed: %w", err)
 	}
 
 	tmpDir := os.TempDir()
 	if err := mountTmpfs(tmpDir, "550", false); err != nil {
-		return fmt.Errorf("mount tmpfs on base dir failed: %w", err)
+		return 0, fmt.Errorf("mount tmpfs on base dir failed: %w", err)
 	}
 	if err := os.Chdir(tmpDir); err != nil {
-		return fmt.Errorf("chdir to tmp dir failed: %w", err)
+		return 0, fmt.Errorf("chdir to tmp dir failed: %w", err)
 	}
 
 	if err := os.Mkdir("newroot", 0755); err != nil {
-		return fmt.Errorf("failed to make newroot directory: %w", err)
+		return 0, fmt.Errorf("failed to make newroot directory: %w", err)
 	}
 	// bind mount on itself so it still exists when tmpDir is unmounted
 	if err := syscall.Mount("newroot", "newroot", "", syscall.MS_REC|syscall.MS_BIND, ""); err != nil {
-		return fmt.Errorf("failed to bind-mount newroot: %w", err)
+		return 0, fmt.Errorf("failed to bind-mount newroot: %w", err)
 	}
 
 	if err := os.Mkdir("oldroot", 0755); err != nil {
-		return fmt.Errorf("failed to make oldroot directory: %w", err)
+		return 0, fmt.Errorf("failed to make oldroot directory: %w", err)
 	}
 	if err := syscall.PivotRoot(tmpDir, "oldroot"); err != nil {
-		return fmt.Errorf("pivot_root to temporary dir failed: %w", err)
+		return 0, fmt.Errorf("pivot_root to temporary dir failed: %w", err)
 	}
 	if err := os.Chdir("/"); err != nil {
-		return fmt.Errorf("chdir / into temporary root dir failed: %w", err)
+		return 0, fmt.Errorf("chdir / into temporary root dir failed: %w", err)
 	}
 
 	// create a file and a directory that we can mount over each mountTypeHide entry,
 	// depending on what type it is
 	hideFileFd, err := os.OpenFile("/hidefile", os.O_RDWR|os.O_CREATE|os.O_EXCL, 0000)
 	if err != nil {
-		return fmt.Errorf("creating /hidefile failed: %w", err)
+		return 0, fmt.Errorf("creating /hidefile failed: %w", err)
 	}
 	hideFile := hideFileFd.Name()
 	hideFileFd.Close()
 	hideDir := "/hidedir"
 	if err := os.Mkdir(hideDir, 0000); err != nil {
-		return fmt.Errorf("creating /hidedir failed: %w", err)
+		return 0, fmt.Errorf("creating /hidedir failed: %w", err)
 	}
 
 	if err := os.Mkdir(path.Join("newroot", "proc"), 0550); err != nil {
-		return fmt.Errorf("creating proc dir failed: %w", err)
+		return 0, fmt.Errorf("creating proc dir failed: %w", err)
 	}
 	if err := mountProc(path.Join("newroot", "proc")); err != nil {
-		return fmt.Errorf("mount proc failed: %w", err)
+		return 0, fmt.Errorf("mount proc failed: %w", err)
 	}
 
 	for _, mount := range mounts {
@@ -335,7 +391,7 @@ func usernsChild() error {
 		// this has the added advantage that we can try to create the correct parent dirs beforehand
 		newDir, err := securejoin.SecureJoin("/newroot", mount.Path)
 		if err != nil {
-			return err
+			return 0, err
 		}
 		newDirRelative := newDir[8:]
 		if settings.Debug && path.Join("/newroot", mount.Path) != newDir {
@@ -348,14 +404,14 @@ func usernsChild() error {
 				fmt.Printf("Bind-mounting (read-only) %s on %s\n", mount.Other, newDirRelative)
 			}
 			if err := mountBind(oldDir, newDir, true); err != nil {
-				return err
+				return 0, err
 			}
 		case mountTypeBindRw:
 			if settings.Debug {
 				fmt.Printf("Bind-mounting %s on %s\n", mount.Other, newDirRelative)
 			}
 			if err := mountBind(oldDir, newDir, false); err != nil {
-				return err
+				return 0, err
 			}
 		case mountTypeHide:
 			if settings.Debug {
@@ -364,16 +420,16 @@ func usernsChild() error {
 
 			newDirInfo, err := os.Stat(newDir)
 			if err != nil {
-				return err
+				return 0, err
 			}
 
 			if newDirInfo.IsDir() {
 				if err := mountBind(hideDir, newDir, true); err != nil {
-					return err
+					return 0, err
 				}
 			} else {
 				if err := mountBind(hideFile, newDir, true); err != nil {
-					return err
+					return 0, err
 				}
 			}
 		case mountTypeEmpty:
@@ -381,21 +437,21 @@ func usernsChild() error {
 				fmt.Printf("Mounting empty tmpfs on %s\n", newDirRelative)
 			}
 			if err := os.MkdirAll(newDir, 0700); err != nil {
-				return fmt.Errorf("creating directory failed: %w", err)
+				return 0, fmt.Errorf("creating directory failed: %w", err)
 			}
 			if err := mountTmpfs(newDir, "700", false); err != nil {
-				return fmt.Errorf("mounting tmpfs on %s failed: %w", newDir, err)
+				return 0, fmt.Errorf("mounting tmpfs on %s failed: %w", newDir, err)
 			}
 		case mountTypeSymlink:
 			if settings.Debug {
 				fmt.Printf("Creating symlink %s -> %s\n", newDirRelative, mount.Other)
 			}
 			if err := os.MkdirAll(filepath.Dir(newDir), 0700); err != nil {
-				return fmt.Errorf("creating directory failed: %w", err)
+				return 0, fmt.Errorf("creating directory failed: %w", err)
 			}
 			// use mount.Other instead of oldDir here since we don't to change the symlink target
 			if err := os.Symlink(mount.Other, newDir); err != nil {
-				return fmt.Errorf("creating symlink failed: %w", err)
+				return 0, fmt.Errorf("creating symlink failed: %w", err)
 			}
 		case mountTypeFileData:
 			if settings.Debug {
@@ -404,24 +460,24 @@ func usernsChild() error {
 
 			tmpFile, err := ioutil.TempFile("/", "bindfile")
 			if err != nil {
-				return err
+				return 0, err
 			}
 
 			data, _ := base64.StdEncoding.DecodeString(mount.Other)
 			_, err = tmpFile.Write(data)
 			if err != nil {
-				return err
+				return 0, err
 			}
 			tmpFile.Close()
 
 			if err := os.MkdirAll(filepath.Dir(newDir), 0700); err != nil {
-				return fmt.Errorf("creating directory failed: %w", err)
+				return 0, fmt.Errorf("creating directory failed: %w", err)
 			}
 			if err := mountBind(tmpFile.Name(), newDir, true); err != nil {
-				return err
+				return 0, err
 			}
 			if err := os.Remove(tmpFile.Name()); err != nil {
-				return err
+				return 0, err
 			}
 		default:
 			panic("")
@@ -430,85 +486,93 @@ func usernsChild() error {
 
 	// make sure the mount is private so we don't proprage the umount() to the outside
 	if err := syscall.Mount("oldroot", "oldroot", "", syscall.MS_REC|syscall.MS_PRIVATE, ""); err != nil {
-		return fmt.Errorf("failed to make oldroot mount private: %w", err)
+		return 0, fmt.Errorf("failed to make oldroot mount private: %w", err)
 	}
 	if err := syscall.Unmount("oldroot", syscall.MNT_DETACH); err != nil {
-		return fmt.Errorf("failed to unmount oldroot: %w", err)
+		return 0, fmt.Errorf("failed to unmount oldroot: %w", err)
 	}
 
 	// open our temporary root dir so we can unmount it once newroot is "/""
 	tmpRootFd, err := syscall.Open("/", syscall.O_DIRECTORY, syscall.O_RDONLY)
 	if err != nil {
-		return fmt.Errorf("failed to open temorary root directory: %w", err)
+		return 0, fmt.Errorf("failed to open temorary root directory: %w", err)
 	}
 	if err := os.Chdir("newroot"); err != nil {
-		return fmt.Errorf("failed to chdir into newroot: %w", err)
+		return 0, fmt.Errorf("failed to chdir into newroot: %w", err)
 	}
 	if err := syscall.PivotRoot(".", "."); err != nil {
-		return fmt.Errorf("pivot_root into newroot failed: %w", err)
+		return 0, fmt.Errorf("pivot_root into newroot failed: %w", err)
 	}
 
 	if err := syscall.Fchdir(tmpRootFd); err != nil {
-		return fmt.Errorf("failed to chdir into temporary root fd: %w", err)
+		return 0, fmt.Errorf("failed to chdir into temporary root fd: %w", err)
 	}
 	if err := syscall.Unmount(".", syscall.MNT_DETACH); err != nil {
-		return fmt.Errorf("failed to unmount temporary root tmpfs: %w", err)
+		return 0, fmt.Errorf("failed to unmount temporary root tmpfs: %w", err)
 	}
 
 	if err := os.Chdir("/"); err != nil {
-		return fmt.Errorf("chdir / in new root failed: %w", err)
+		return 0, fmt.Errorf("chdir / in new root failed: %w", err)
 	}
 	if err := syscall.Close(tmpRootFd); err != nil {
-		return fmt.Errorf("failed to close temporary root fd: %w", err)
+		return 0, fmt.Errorf("failed to close temporary root fd: %w", err)
 	}
 
 	if !settings.Network {
 		// the loopback interface is not up by default but automatically has 127.0.0.1/::1 IPs
 		ifaceLo, err := netlink.LinkByName("lo")
 		if err != nil {
-			return err
+			return 0, err
 		}
 		if err = netlink.LinkSetUp(ifaceLo); err != nil {
-			return err
+			return 0, err
 		}
 	}
 
 	if err := dropCapabilities(); err != nil {
-		return fmt.Errorf("dropping capabilities failed: %w", err)
+		return 0, fmt.Errorf("dropping capabilities failed: %w", err)
 	}
 
 	if err := os.Chdir(settings.Cwd); err != nil {
-		return fmt.Errorf("chdir to %s failed: %w", settings.Cwd, err)
+		return 0, fmt.Errorf("chdir to %s failed: %w", settings.Cwd, err)
 	}
 
 	if settings.Seccomp != "no" {
 		seccompFilter, err := loadSeccomp(settings.Seccomp)
 		if err != nil {
-			return err
+			return 0, err
 		}
 		defer seccompFilter.Release()
 
 		if err := seccompFilter.Load(); err != nil {
-			return err
+			return 0, err
 		}
 	} else {
 		if _, err := syscall.Setsid(); err != nil {
-			return err
+			return 0, err
 		}
 	}
 
 	executable, err := exec.LookPath(settings.Command[0])
 	if err != nil {
-		return fmt.Errorf("executable does not exist: %w", err)
+		return 0, fmt.Errorf("executable does not exist: %w", err)
 	}
 
 	if len(settings.OverrideArg0) > 0 {
 		settings.Command[0] = settings.OverrideArg0
 	}
 
-	if err := syscall.Exec(executable, settings.Command, os.Environ()); err != nil {
-		return fmt.Errorf("execing failed: %w", err)
+	cmd := exec.Cmd{
+		Path:   executable,
+		Args:   settings.Command,
+		Stdin:  os.Stdin,
+		Stdout: os.Stdout,
+		Stderr: os.Stderr,
+		Env:    os.Environ(),
+	}
+	if err := cmd.Start(); err != nil {
+		return 0, fmt.Errorf("running command failed: %w", err)
 	}
 
-	return nil
+	return reapChildren(cmd.Process.Pid), nil
 }
