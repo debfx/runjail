@@ -37,7 +37,7 @@ import (
 type passUsernsChildStruct struct {
 	Settings     settingsStruct
 	Mounts       []mount
-	ReturnCodeFd uintptr
+	ReturnCodeFd int
 }
 
 func encodePassUsernsChild(data passUsernsChildStruct) ([]byte, error) {
@@ -74,20 +74,24 @@ func usernsRun(settings settingsStruct, mounts []mount, environ []string, fork b
 		return 0, err
 	}
 
-	pipeR, pipeW, err := os.Pipe()
-	if err != nil {
-		return 0, err
-	}
-	if err = clearCloseOnExec(pipeW.Fd()); err != nil {
-		return 0, err
-	}
-	defer pipeW.Close()
-
 	passStruct := passUsernsChildStruct{
 		Settings:     settings,
 		Mounts:       mounts,
-		ReturnCodeFd: pipeW.Fd(),
+		ReturnCodeFd: -1,
 	}
+
+	var pipeR, pipeW *os.File
+	if !fork {
+		pipeR, pipeW, err = os.Pipe()
+		if err != nil {
+			return 0, err
+		}
+		if err = clearCloseOnExec(pipeW.Fd()); err != nil {
+			return 0, err
+		}
+		passStruct.ReturnCodeFd = int(pipeW.Fd())
+	}
+
 	encodedParams, err := encodePassUsernsChild(passStruct)
 	if err != nil {
 		return 0, fmt.Errorf("failed to serialize settings: %w", err)
@@ -133,6 +137,12 @@ func usernsRun(settings settingsStruct, mounts []mount, environ []string, fork b
 	}
 
 	err = cmd.Start()
+	if pipeW != nil {
+		pipeW.Close()
+	}
+	for _, fd := range settings.SyncFds {
+		unix.Close(int(fd))
+	}
 	if err != nil {
 		if exitErr, isExitErr := err.(*exec.ExitError); isExitErr {
 			return exitErr.ProcessState.ExitCode(), nil
@@ -315,13 +325,15 @@ func reapChildren(childPid int, syncFile *os.File) error {
 				exitCode = 255
 			}
 
-			_, err = syncFile.Write([]byte{exitCode})
-			if err != nil {
-				return err
-			}
-			err = syncFile.Close()
-			if err != nil {
-				return err
+			if syncFile != nil {
+				_, err = syncFile.Write([]byte{exitCode})
+				if err != nil {
+					return fmt.Errorf("failed to write exit code to pipe: %w", err)
+				}
+				err = syncFile.Close()
+				if err != nil {
+					return fmt.Errorf("failed to write exit code pipe: %w", err)
+				}
 			}
 		}
 	}
@@ -342,6 +354,11 @@ func usernsChild() error {
 	settings := passStruct.Settings
 	mounts := passStruct.Mounts
 
+	if passStruct.ReturnCodeFd != -1 {
+		if err := setCloseOnExec(uintptr(passStruct.ReturnCodeFd)); err != nil {
+			return fmt.Errorf("failed to clear O_CLOEXEC on fd %d: %w", passStruct.ReturnCodeFd, err)
+		}
+	}
 	for _, fd := range settings.SyncFds {
 		if err := setCloseOnExec(fd); err != nil {
 			return fmt.Errorf("failed to clear O_CLOEXEC on fd %d: %w", fd, err)
@@ -587,7 +604,10 @@ func usernsChild() error {
 		return fmt.Errorf("running command failed: %w", err)
 	}
 
-	syncFile := os.NewFile(passStruct.ReturnCodeFd, "pipe")
+	var syncFile *os.File
+	if passStruct.ReturnCodeFd != -1 {
+		syncFile = os.NewFile(uintptr(passStruct.ReturnCodeFd), "pipe")
+	}
 
 	return reapChildren(cmd.Process.Pid, syncFile)
 }
