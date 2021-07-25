@@ -13,6 +13,12 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+/*
+unix_user_* is a fork of parts of the golang os/user code to expose the
+user shell in the returned struct.
+Additionally Uid and Gid are uint64 instead of strings.
+*/
+
 package main
 
 import "syscall"
