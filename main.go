@@ -76,11 +76,11 @@ func main() {
 	// internal subcommands
 	if len(os.Args) > 2 {
 		if os.Args[1] == "userns-child" {
-			exitCode, err := usernsChild()
+			err := usernsChild()
 			if err != nil {
 				fatalErr(err)
 			}
-			os.Exit(exitCode)
+			os.Exit(0)
 		} else if os.Args[1] == "http-proxy" {
 			err = runHttpProxy()
 			if err != nil {
