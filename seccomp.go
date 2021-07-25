@@ -263,6 +263,14 @@ func loadSeccomp(filterName string) (*seccomp.ScmpFilter, error) {
 			Op:       seccomp.CompareMaskedEqual,
 			OpValue1: syscall.CLONE_NEWUSER,
 			OpValue2: syscall.CLONE_NEWUSER})
+
+		// only allow personality(PER_LINUX)
+		rules = append(rules, seccompRule{
+			Action:   actionEperm,
+			Syscall:  syscall.SYS_PERSONALITY,
+			Arg:      0,
+			Op:       seccomp.CompareNotEqual,
+			OpValue1: 0})
 	}
 
 	for _, rule := range rules {
