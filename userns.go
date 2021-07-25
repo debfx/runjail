@@ -300,8 +300,9 @@ func mountBind(source string, target string, readOnly bool) error {
 	return nil
 }
 
-func reapChildren(childPid int, syncFile *os.File) error {
+func reapChildren(mainPid int, helperPids []int, syncFile *os.File) error {
 	var wstatus syscall.WaitStatus
+	mainExited := false
 
 	for {
 		// reap any terminated child
@@ -315,7 +316,9 @@ func reapChildren(childPid int, syncFile *os.File) error {
 			return nil
 		}
 
-		if err == nil && diedPid == childPid {
+		helperPids = removeIntFromSlice(diedPid, helperPids)
+
+		if err == nil && diedPid == mainPid {
 			var exitCode byte
 			if wstatus.Exited() {
 				exitCode = byte(wstatus.ExitStatus())
@@ -333,6 +336,33 @@ func reapChildren(childPid int, syncFile *os.File) error {
 				err = syncFile.Close()
 				if err != nil {
 					return fmt.Errorf("failed to write exit code pipe: %w", err)
+				}
+			}
+
+			mainExited = true
+		}
+
+		if mainExited && len(helperPids) != 0 {
+			allNonHelperExited := true
+			runningPids, err := getAllRunningPids()
+			if err != nil {
+				return fmt.Errorf("failed to read all processes: %w", err)
+			}
+
+			for _, pid := range runningPids {
+				if pid != 1 && !isIntInSlice(pid, helperPids) {
+					allNonHelperExited = false
+					break
+				}
+			}
+
+			if allNonHelperExited {
+				// only helper processes left, terminate them
+				for _, pid := range helperPids {
+					err = syscall.Kill(pid, syscall.SIGKILL)
+					if err != nil && err != syscall.ESRCH {
+						return fmt.Errorf("failed to kill helper process: %w", err)
+					}
 				}
 			}
 		}
@@ -583,6 +613,28 @@ func usernsChild() error {
 		}
 	}
 
+	helperPids := []int{}
+
+	for _, helper := range settings.Helpers {
+		executable, err := exec.LookPath(helper[0])
+		if err != nil {
+			return fmt.Errorf("helper executable does not exist: %w", err)
+		}
+
+		cmd := exec.Cmd{
+			Path:   executable,
+			Args:   helper,
+			Stdin:  os.Stdin,
+			Stdout: os.Stdout,
+			Stderr: os.Stderr,
+			Env:    os.Environ(),
+		}
+		if err := cmd.Start(); err != nil {
+			return fmt.Errorf("running helper failed: %w", err)
+		}
+		helperPids = append(helperPids, cmd.Process.Pid)
+	}
+
 	executable, err := exec.LookPath(settings.Command[0])
 	if err != nil {
 		return fmt.Errorf("executable does not exist: %w", err)
@@ -609,5 +661,5 @@ func usernsChild() error {
 		syncFile = os.NewFile(uintptr(passStruct.ReturnCodeFd), "pipe")
 	}
 
-	return reapChildren(cmd.Process.Pid, syncFile)
+	return reapChildren(cmd.Process.Pid, helperPids, syncFile)
 }

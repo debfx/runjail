@@ -87,8 +87,6 @@ func main() {
 				fatalErr(err)
 			}
 			return
-		} else if os.Args[1] == "http-proxy-wrapper" {
-			fatalErr(runHttpProxyWrapper())
 		}
 	}
 	if len(os.Args) > 1 {
@@ -341,8 +339,7 @@ func main() {
 			fatalErr(err)
 		}
 		settings.SyncFds = append(settings.SyncFds, pipe)
-		settings.Command = append([]string{"/proc/self/exe", "http-proxy-wrapper"}, settings.Command...)
-		settings.OverrideArg0 = os.Args[0]
+		settings.Helpers = append(settings.Helpers, []string{"/proc/self/exe", "http-proxy-forwarder"})
 		mounts = mergeMounts(mounts, []mount{proxyMount})
 		envVars["http_proxy"] = "http://localhost:18080/"
 		envVars["https_proxy"] = "http://localhost:18080/"

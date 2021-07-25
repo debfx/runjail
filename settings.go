@@ -32,6 +32,7 @@ type settingsStruct struct {
 	Command        []string
 	OverrideArg0   string
 	SandboxBackend string
+	Helpers        [][]string
 }
 
 func getDefaultSettings() settingsStruct {

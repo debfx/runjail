@@ -26,12 +26,10 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"os/exec"
 	"path"
 	"strconv"
 	"strings"
 	"sync"
-	"syscall"
 
 	"github.com/elazarl/goproxy"
 	"github.com/gobwas/glob"
@@ -296,33 +294,4 @@ func runHttpProxyForwarder() error {
 		}
 		go forwardConnection(localConn, proxyServerPath)
 	}
-}
-
-func runHttpProxyWrapper() error {
-	cmd := exec.Cmd{
-		Path:   "/proc/self/exe",
-		Args:   []string{os.Args[0], "http-proxy-forwarder"},
-		Stdin:  os.Stdin,
-		Stdout: os.Stdout,
-		Stderr: os.Stderr,
-		Env:    nil,
-		SysProcAttr: &syscall.SysProcAttr{
-			Pdeathsig: syscall.SIGKILL,
-		},
-	}
-
-	if err := cmd.Start(); err != nil {
-		return err
-	}
-
-	executable, err := exec.LookPath(os.Args[2])
-	if err != nil {
-		return fmt.Errorf("executable does not exist: %w", err)
-	}
-
-	if err := syscall.Exec(executable, os.Args[2:], os.Environ()); err != nil {
-		return fmt.Errorf("execing failed: %w", err)
-	}
-
-	return nil
 }

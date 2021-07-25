@@ -73,6 +73,29 @@ func isStringInSlice(val string, list []string) bool {
 	return false
 }
 
+func isIntInSlice(val int, list []int) bool {
+	for _, elem := range list {
+		if elem == val {
+			return true
+		}
+	}
+
+	return false
+}
+
+// Returns a slice that has first occournces of `val` removed from `list`
+// Warning: does not preserve order of elements in `list`
+func removeIntFromSlice(val int, list []int) []int {
+	for i, elem := range list {
+		if elem == val {
+			list[i] = list[len(list)-1]
+			return list[:len(list)-1]
+		}
+	}
+
+	return list
+}
+
 func splitMapOption(args []string) (map[string]string, error) {
 	result := map[string]string{}
 
@@ -210,4 +233,30 @@ func createTempFile(dir string) (*os.File, error) {
 
 	path := "/proc/self/fd/" + strconv.Itoa(fd)
 	return os.NewFile(uintptr(fd), path), nil
+}
+
+func getAllRunningPids() ([]int, error) {
+	procDir, err := os.Open("/proc")
+	if err != nil {
+		return nil, fmt.Errorf("failed to open /proc: %w", err)
+	}
+	defer procDir.Close()
+
+	result := []int{}
+
+	dirNames, err := procDir.Readdirnames(0)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read /proc entries: %w", err)
+	}
+
+	for _, name := range dirNames {
+		pid, err := strconv.ParseInt(name, 10, 0)
+		if err != nil {
+			continue
+		}
+
+		result = append(result, int(pid))
+	}
+
+	return result, nil
 }
