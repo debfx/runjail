@@ -126,7 +126,7 @@ func main() {
 	}
 
 	// Ignore errors; CommandLine is set for ExitOnError.
-	flag.CommandLine.Parse(expandedArgs)
+	flag.CommandLine.Parse(expandedArgs) //nolint:golint,errcheck
 
 	settings := getDefaultSettings()
 
