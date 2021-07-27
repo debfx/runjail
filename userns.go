@@ -598,7 +598,7 @@ func usernsChild() error {
 	}
 
 	if settings.Seccomp != "no" {
-		seccompFilter, err := loadSeccomp(settings.Seccomp)
+		seccompFilter, err := loadSeccomp(settings.Seccomp, settings.Debug)
 		if err != nil {
 			return err
 		}

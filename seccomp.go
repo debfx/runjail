@@ -30,11 +30,23 @@ type seccompRule struct {
 	OpValue2 uint64
 }
 
-func loadSeccomp(filterName string) (*seccomp.ScmpFilter, error) {
+func loadSeccomp(filterName string, logDenials bool) (*seccomp.ScmpFilter, error) {
 
 	filter, err := seccomp.NewFilter(seccomp.ActAllow)
 	if err != nil {
 		return nil, err
+	}
+
+	api_level, err := seccomp.GetApi()
+	if err != nil {
+		return nil, err
+	}
+
+	if logDenials && api_level >= 3 {
+		err = filter.SetLogBit(true)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	rules := []seccompRule{}
