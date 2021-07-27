@@ -111,9 +111,10 @@ func loadSeccomp(filterName string, logDenials bool) (*seccomp.ScmpFilter, error
 			// Change the system time
 			"adjtimex",
 			"clock_adjtime",
+			"clock_adjtime64",
 			"clock_settime",
+			"clock_settime64",
 			"settimeofday",
-			"stime",
 
 			// @cpu-emulation
 			// System calls for CPU emulation functionality
@@ -127,8 +128,7 @@ func loadSeccomp(filterName string, logDenials bool) (*seccomp.ScmpFilter, error
 			// Debugging, performance monitoring and tracing functionality
 			"lookup_dcookie",
 			"perf_event_open",
-			"process_vm_readv",
-			"process_vm_writev",
+			"pidfd_getfd",
 			"ptrace",
 			"rtas",
 			"s390_runtime_instr",
@@ -149,7 +149,14 @@ func loadSeccomp(filterName string, logDenials bool) (*seccomp.ScmpFilter, error
 			// @mount
 			// Mounting and unmounting of file systems
 			"chroot",
+			"fsconfig",
+			"fsmount",
+			"fsopen",
+			"fspick",
 			"mount",
+			"mount_setattr",
+			"move_mount",
+			"open_tree",
 			"pivot_root",
 			"umount",
 			"umount2",
@@ -175,6 +182,7 @@ func loadSeccomp(filterName string, logDenials bool) (*seccomp.ScmpFilter, error
 			"security",
 			"sgetmask",
 			"ssetmask",
+			"stime",
 			"stty",
 			"sysfs",
 			"tuxcall",
@@ -190,6 +198,8 @@ func loadSeccomp(filterName string, logDenials bool) (*seccomp.ScmpFilter, error
 			"bpf",
 			//"capset",
 			"chroot",
+			"fanotify_init",
+			"fanotify_mark",
 			"nfsservctl",
 			"open_by_handle_at",
 			"pivot_root",
@@ -246,11 +256,20 @@ func loadSeccomp(filterName string, logDenials bool) (*seccomp.ScmpFilter, error
 			"swapoff",
 			"swapon",
 
-			// numa
+			// @resources
+			// Alter resource settings
+			"ioprio_set",
 			"mbind",
 			"migrate_pages",
 			"move_pages",
+			//"nice",
+			"sched_setaffinity",
+			"sched_setattr",
+			"sched_setparam",
+			"sched_setscheduler",
 			"set_mempolicy",
+			//"setpriority",
+			//"setrlimit",
 
 			// namespaces
 			"unshare",
