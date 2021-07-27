@@ -17,7 +17,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/user"
 	"strconv"
@@ -168,10 +167,6 @@ func setFdReadOnly(fd uintptr) error {
 	return nil
 }
 
-func getDataFile(str string) (*os.File, error) {
-	return getDataFileBytes([]byte(str))
-}
-
 func getDataFileBytes(bytes []byte) (*os.File, error) {
 	tmpfile, err := createTempFile("")
 	if err != nil {
@@ -197,24 +192,6 @@ func getDataFileBytes(bytes []byte) (*os.File, error) {
 	}
 
 	return tmpfile, nil
-}
-
-func readStringFromFile(path string) (string, error) {
-	result, err := ioutil.ReadFile(path)
-	if err != nil {
-		return "", err
-	}
-
-	return string(result), nil
-}
-
-func readStringFromFileObject(file *os.File) (string, error) {
-	result, err := ioutil.ReadAll(file)
-	if err != nil {
-		return "", err
-	}
-
-	return string(result), nil
 }
 
 func createTempFile(dir string) (*os.File, error) {
