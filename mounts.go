@@ -80,6 +80,18 @@ func getDefaultOptions() (rawMountOptions, error) {
 	defaults.Symlink["/dev/stdout"] = "/proc/self/fd/1"
 	defaults.Symlink["/dev/stderr"] = "/proc/self/fd/2"
 	defaults.Symlink["/dev/ptmx"] = "/dev/pts/ptmx"
+	defaults.HideTry = []string{
+		"/proc/asound",
+		"/proc/acpi",
+		"/proc/kcore",
+		"/proc/keys",
+		"/proc/latency_stats",
+		"/proc/timer_list",
+		"/proc/timer_stats",
+		"/proc/sched_debug",
+		"/proc/scsi",
+		"/sys/firmware",
+	}
 
 	files, err := ioutil.ReadDir("/")
 	if err != nil {
