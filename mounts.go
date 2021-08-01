@@ -64,13 +64,15 @@ func getDefaultOptions() (rawMountOptions, error) {
 	defaults := rawMountOptions{}
 
 	defaults.Ro = []string{}
-	defaults.Rw = []string{"/dev/null", "/dev/zero", "/dev/full", "/dev/random", "/dev/urandom", "/dev/tty", "/dev/pts", "/dev/ptmx"}
+	defaults.Rw = []string{"/dev/null", "/dev/zero", "/dev/full", "/dev/random", "/dev/urandom", "/dev/tty"}
+	defaults.BindRw = make(map[string]string)
 	defaults.Empty = []string{"/tmp", "/var/tmp", "/dev/shm", userHomeDir, userRuntimeDir}
 	defaults.Symlink = make(map[string]string)
 	defaults.Symlink["/dev/fd"] = "/proc/self/fd"
 	defaults.Symlink["/dev/stdin"] = "/proc/self/fd/0"
 	defaults.Symlink["/dev/stdout"] = "/proc/self/fd/1"
 	defaults.Symlink["/dev/stderr"] = "/proc/self/fd/2"
+	defaults.Symlink["/dev/ptmx"] = "/dev/pts/ptmx"
 
 	files, err := ioutil.ReadDir("/")
 	if err != nil {
@@ -92,6 +94,14 @@ func getDefaultOptions() (rawMountOptions, error) {
 			// ideally we'd mount a new sysfs but the kernel only allows this if we are admin of the network namespace
 			defaults.Ro = append(defaults.Ro, absolutePath)
 		}
+	}
+
+	if isTerminal(1) {
+		ttyPath, err := terminalName(1)
+		if err != nil {
+			return rawMountOptions{}, fmt.Errorf("reading the tty name failed: %w", err)
+		}
+		defaults.BindRw[ttyPath] = "/dev/console"
 	}
 
 	return defaults, nil

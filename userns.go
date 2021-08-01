@@ -236,6 +236,10 @@ func mountProc(path string) error {
 	return syscall.Mount("proc", path, "proc", syscall.MS_NOSUID|syscall.MS_NODEV|syscall.MS_NOEXEC, "")
 }
 
+func mountDevPts(path string) error {
+	return syscall.Mount("devpts", path, "devpts", syscall.MS_NOSUID|syscall.MS_NOEXEC, "newinstance,ptmxmode=0666,mode=620")
+}
+
 func remountReadOnly(path string, existingFlags int) error {
 	return syscall.Mount(path, path, "", uintptr(existingFlags|syscall.MS_REMOUNT|syscall.MS_REC|syscall.MS_BIND|syscall.MS_RDONLY), "")
 }
@@ -443,6 +447,13 @@ func usernsChild() error {
 	}
 	if err := mountProc(path.Join("newroot", "proc")); err != nil {
 		return fmt.Errorf("mount proc failed: %w", err)
+	}
+
+	if err := os.MkdirAll(path.Join("newroot", "dev/pts"), 0550); err != nil {
+		return fmt.Errorf("creating dev/pts dir failed: %w", err)
+	}
+	if err := mountDevPts(path.Join("newroot", "dev", "pts")); err != nil {
+		return fmt.Errorf("mount devpts failed: %w", err)
 	}
 
 	for _, mount := range mounts {

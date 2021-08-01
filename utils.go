@@ -237,3 +237,18 @@ func getAllRunningPids() ([]int, error) {
 
 	return result, nil
 }
+
+// isTerminal return true if the file descriptor is terminal.
+func isTerminal(fd uintptr) bool {
+	_, err := unix.IoctlGetTermios(int(fd), unix.TCGETS)
+	return err == nil
+}
+
+// terminalName prints the file name of the terminal connected to the fd
+func terminalName(fd uintptr) (string, error) {
+	dest, err := os.Readlink(fmt.Sprintf("/proc/self/fd/%d", fd))
+	if err != nil {
+		return "", err
+	}
+	return dest, nil
+}
