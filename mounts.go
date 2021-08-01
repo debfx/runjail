@@ -277,7 +277,7 @@ func parseRawMountOptions(options rawMountOptions) ([]mount, error) {
 		mounts = append(mounts, mount)
 	}
 
-	for source, path := range options.BindRo {
+	for source, path := range options.BindRoTry {
 		mount, err := parseRawMountBind(path, source, true, true)
 		if err == nil {
 			mounts = append(mounts, mount)
