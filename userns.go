@@ -19,6 +19,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/gob"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -491,6 +492,9 @@ func usernsChild() error {
 
 			newDirInfo, err := os.Stat(newDir)
 			if err != nil {
+				if mount.Optional && errors.Is(err, os.ErrNotExist) {
+					continue
+				}
 				return err
 			}
 

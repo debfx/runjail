@@ -16,6 +16,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -26,13 +27,18 @@ import (
 )
 
 type rawMountOptions struct {
-	Ro      []string
-	Rw      []string
-	Empty   []string
-	Hide    []string
-	BindRo  map[string]string
-	BindRw  map[string]string
-	Symlink map[string]string
+	Ro        []string
+	RoTry     []string
+	Rw        []string
+	RwTry     []string
+	Empty     []string
+	Hide      []string
+	HideTry   []string
+	BindRo    map[string]string
+	BindRoTry map[string]string
+	BindRw    map[string]string
+	BindRwTry map[string]string
+	Symlink   map[string]string
 }
 
 const (
@@ -45,9 +51,10 @@ const (
 )
 
 type mount struct {
-	Path  string
-	Type  int
-	Other string
+	Path     string
+	Type     int
+	Other    string
+	Optional bool
 }
 
 func getDefaultOptions() (rawMountOptions, error) {
@@ -164,35 +171,60 @@ func preprocessPath(path string, evalSymlinks bool) (string, error) {
 	return result, nil
 }
 
+func parseRawMountBind(path string, other string, readonly bool, optional bool) (mount, error) {
+	pathProcessed, err := preprocessPath(path, false)
+	if err != nil {
+		return mount{}, err
+	}
+	otherProcessed, err := preprocessPath(other, true)
+	if err != nil {
+		return mount{}, err
+	}
+
+	mount := mount{Path: pathProcessed, Other: otherProcessed, Optional: optional}
+	if readonly {
+		mount.Type = mountTypeBindRo
+	} else {
+		mount.Type = mountTypeBindRw
+	}
+	return mount, nil
+}
+
 func parseRawMountOptions(options rawMountOptions) ([]mount, error) {
 	mounts := []mount{}
 
 	for _, path := range options.Ro {
-		pathProcessed, err := preprocessPath(path, false)
+		mount, err := parseRawMountBind(path, path, true, false)
 		if err != nil {
 			return nil, err
 		}
-		otherProcessed, err := preprocessPath(path, true)
-		if err != nil {
-			return nil, err
-		}
-
-		mount := mount{Path: pathProcessed, Other: otherProcessed, Type: mountTypeBindRo}
 		mounts = append(mounts, mount)
 	}
 
-	for _, path := range options.Rw {
-		pathProcessed, err := preprocessPath(path, false)
-		if err != nil {
+	for _, path := range options.RoTry {
+		mount, err := parseRawMountBind(path, path, true, true)
+		if err == nil {
+			mounts = append(mounts, mount)
+		} else if !errors.Is(err, os.ErrNotExist) {
 			return nil, err
 		}
-		otherProcessed, err := preprocessPath(path, true)
-		if err != nil {
-			return nil, err
-		}
+	}
 
-		mount := mount{Path: pathProcessed, Other: otherProcessed, Type: mountTypeBindRw}
+	for _, path := range options.Rw {
+		mount, err := parseRawMountBind(path, path, false, false)
+		if err != nil {
+			return nil, err
+		}
 		mounts = append(mounts, mount)
+	}
+
+	for _, path := range options.RwTry {
+		mount, err := parseRawMountBind(path, path, false, true)
+		if err == nil {
+			mounts = append(mounts, mount)
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return nil, err
+		}
 	}
 
 	for _, path := range options.Hide {
@@ -202,6 +234,16 @@ func parseRawMountOptions(options rawMountOptions) ([]mount, error) {
 		}
 
 		mount := mount{Path: pathProcessed, Type: mountTypeHide}
+		mounts = append(mounts, mount)
+	}
+
+	for _, path := range options.HideTry {
+		pathProcessed, err := preprocessPath(path, false)
+		if err != nil {
+			return nil, err
+		}
+
+		mount := mount{Path: pathProcessed, Type: mountTypeHide, Optional: true}
 		mounts = append(mounts, mount)
 	}
 
@@ -216,31 +258,37 @@ func parseRawMountOptions(options rawMountOptions) ([]mount, error) {
 	}
 
 	for source, path := range options.BindRo {
-		pathProcessed, err := preprocessPath(path, false)
+		mount, err := parseRawMountBind(path, source, true, false)
 		if err != nil {
 			return nil, err
 		}
-		otherProcessed, err := preprocessPath(source, true)
-		if err != nil {
-			return nil, err
-		}
-
-		mount := mount{Path: pathProcessed, Other: otherProcessed, Type: mountTypeBindRo}
 		mounts = append(mounts, mount)
 	}
 
-	for source, path := range options.BindRw {
-		pathProcessed, err := preprocessPath(path, false)
-		if err != nil {
+	for source, path := range options.BindRo {
+		mount, err := parseRawMountBind(path, source, true, true)
+		if err == nil {
+			mounts = append(mounts, mount)
+		} else if !errors.Is(err, os.ErrNotExist) {
 			return nil, err
 		}
-		otherProcessed, err := preprocessPath(source, true)
-		if err != nil {
-			return nil, err
-		}
+	}
 
-		mount := mount{Path: pathProcessed, Other: otherProcessed, Type: mountTypeBindRw}
+	for source, path := range options.BindRw {
+		mount, err := parseRawMountBind(path, source, false, false)
+		if err != nil {
+			return nil, err
+		}
 		mounts = append(mounts, mount)
+	}
+
+	for source, path := range options.BindRwTry {
+		mount, err := parseRawMountBind(path, source, false, true)
+		if err == nil {
+			mounts = append(mounts, mount)
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return nil, err
+		}
 	}
 
 	for path, target := range options.Symlink {
