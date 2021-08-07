@@ -61,7 +61,7 @@ func decodePassUsernsChild(input []byte) (passUsernsChildStruct, error) {
 	return output, nil
 }
 
-func usernsRun(settings settingsStruct, mounts []mount, environ []string, fork bool) (int, error) {
+func usernsRun(exe string, settings settingsStruct, mounts []mount, environ []string, fork bool) (int, error) {
 	var unshareFlags uintptr = syscall.CLONE_NEWUSER | syscall.CLONE_NEWNS | syscall.CLONE_NEWPID
 	if !settings.Ipc {
 		unshareFlags = unshareFlags | syscall.CLONE_NEWIPC
@@ -110,7 +110,7 @@ func usernsRun(settings settingsStruct, mounts []mount, environ []string, fork b
 	}
 
 	cmd := exec.Cmd{
-		Path:   "/proc/self/exe",
+		Path:   exe,
 		Args:   []string{os.Args[0], "userns-child", strconv.Itoa(int(dataFile.Fd()))},
 		Stdin:  os.Stdin,
 		Stdout: os.Stdout,

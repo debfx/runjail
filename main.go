@@ -25,6 +25,8 @@ import (
 	flag "github.com/spf13/pflag"
 )
 
+var selfMemFd int
+
 func expandCmdFlags() []string {
 	// pflag doesn't support passing multiple values to slice arguments like this: --slice first second
 	// work around this by doing some proprocessing on os.Args
@@ -127,6 +129,11 @@ func main() {
 
 	// Ignore errors; CommandLine is set for ExitOnError.
 	flag.CommandLine.Parse(expandedArgs) //nolint:golint,errcheck
+
+	selfMemFd, err = clonePathAsMemfd("/proc/self/exe", "runjail")
+	if err != nil {
+		panic(err)
+	}
 
 	settings := getDefaultSettings()
 
@@ -364,5 +371,5 @@ func run(settings settingsStruct, mounts []mount, environ []string, fork bool) (
 	}
 	sort.Slice(mounts, func(i, j int) bool { return mounts[i].Path < mounts[j].Path })
 
-	return usernsRun(settings, mounts, environ, fork)
+	return usernsRun(fmt.Sprintf("/proc/self/fd/%d", selfMemFd), settings, mounts, environ, fork)
 }
