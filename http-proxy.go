@@ -19,10 +19,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/gob"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net"
 	"net/http"
 	"os"
@@ -30,6 +30,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 
 	"github.com/elazarl/goproxy"
 	"github.com/gobwas/glob"
@@ -259,18 +260,30 @@ func runHttpProxy() error {
 
 func forwardConnection(localConn net.Conn, proxyServerPath string) {
 	proxyServerConn, err := net.Dial("unix", proxyServerPath)
+	if err != nil {
+		fmt.Printf("Failed to connect to unix socket of the http proxy: %v\n", err)
+		return
+	}
 
 	go func() {
 		_, err = io.Copy(proxyServerConn, localConn)
 		if err != nil {
-			log.Fatalf("io.Copy failed: %v", err)
+			if !errors.Is(err, syscall.EPIPE) {
+				fmt.Printf("Forwarding from http proxy unix socket to local tcp port failed: %v\n", err)
+			}
+			proxyServerConn.Close()
+			localConn.Close()
 		}
 	}()
 
 	go func() {
 		_, err = io.Copy(localConn, proxyServerConn)
 		if err != nil {
-			log.Fatalf("io.Copy failed: %v", err)
+			if !errors.Is(err, syscall.EPIPE) {
+				fmt.Printf("Forwarding from local tcp port to http proxy unix socket failed: %v\n", err)
+			}
+			proxyServerConn.Close()
+			localConn.Close()
 		}
 	}()
 }
