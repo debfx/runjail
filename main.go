@@ -33,12 +33,17 @@ func expandCmdFlags() []string {
 	// this example would be transformed to: --slice first --slice second
 	expandedArgs := []string{}
 	sliceArgs := map[string]bool{
-		"--ro":      true,
-		"--rw":      true,
-		"--hide":    true,
-		"--empty":   true,
-		"--bind-ro": true,
-		"--bind-rw": true,
+		"--ro":          true,
+		"--ro-try":      true,
+		"--rw":          true,
+		"--rw-try":      true,
+		"--hide":        true,
+		"--hide-try":    true,
+		"--empty":       true,
+		"--bind-ro":     true,
+		"--bind-ro-try": true,
+		"--bind-rw":     true,
+		"--bind-rw-try": true,
 	}
 	inSliceArg := false
 	firstListArg := true
@@ -107,11 +112,16 @@ func main() {
 	}
 
 	flagRo := flag.StringSlice("ro", []string{}, "Mount file/directory from parent namespace read-only.")
+	flagRoTry := flag.StringSlice("ro-try", []string{}, "Mount file/directory from parent namespace read-only. Ignores non-existent source.")
 	flagRw := flag.StringSlice("rw", []string{}, "Mount file/directory from parent namespace read-write.")
+	flagRwTry := flag.StringSlice("rw-try", []string{}, "Mount file/directory from parent namespace read-write. Ignores non-existent source.")
 	flagHide := flag.StringSlice("hide", []string{}, "Make file/directory inaccessible.")
+	flagHideTry := flag.StringSlice("hide-try", []string{}, "Make file/directory inaccessible. Ignore non-existent path.")
 	flagEmpty := flag.StringSlice("empty", []string{}, "Mount empty tmpfs on the specified path.")
 	flagBindRo := flag.StringSlice("bind-ro", []string{}, "Bind mount source file/directory from parent namespace to target read-only (Format: \"source:target\").")
+	flagBindRoTry := flag.StringSlice("bind-ro-try", []string{}, "Bind mount source file/directory from parent namespace to target read-only (Format: \"source:target\"). Ignore non-existent source.")
 	flagBindRw := flag.StringSlice("bind-rw", []string{}, "Bind mount source file/directory from parent namespace to target read-write (Format: \"source:target\").")
+	flagBindRwTry := flag.StringSlice("bind-rw-try", []string{}, "Bind mount source file/directory from parent namespace to target read-write (Format: \"source:target\"). Ignore non-existent source.")
 	flagDebug := flag.Bool("debug", false, "Enable debug mode.")
 	flagIpc := flag.Bool("ipc", false, "Allow IPC (don't start an own IPC namespace).")
 	flagNet := flag.String("net", "no", "Enable/disable network access (yes/no).")
@@ -164,12 +174,17 @@ func main() {
 		}
 
 		configRawMountOptions := rawMountOptions{
-			Ro:     config.Ro,
-			Rw:     config.Rw,
-			Hide:   config.Hide,
-			Empty:  config.Empty,
-			BindRo: config.BindRo,
-			BindRw: config.BindRw,
+			Ro:        config.Ro,
+			RoTry:     config.RoTry,
+			Rw:        config.Rw,
+			RwTry:     config.RwTry,
+			Hide:      config.Hide,
+			HideTry:   config.HideTry,
+			Empty:     config.Empty,
+			BindRo:    config.BindRo,
+			BindRoTry: config.BindRoTry,
+			BindRw:    config.BindRw,
+			BindRwTry: config.BindRwTry,
 		}
 		configMountOptions, err = parseRawMountOptions(configRawMountOptions)
 		if err != nil {
@@ -261,18 +276,29 @@ func main() {
 	}
 
 	flagRawMountOptions := rawMountOptions{
-		Ro:    *flagRo,
-		Rw:    *flagRw,
-		Hide:  *flagHide,
-		Empty: *flagEmpty,
+		Ro:      *flagRo,
+		RoTry:   *flagRoTry,
+		Rw:      *flagRw,
+		RwTry:   *flagRwTry,
+		Hide:    *flagHide,
+		HideTry: *flagHideTry,
+		Empty:   *flagEmpty,
 	}
 
 	flagRawMountOptions.BindRo, err = splitMapOption(*flagBindRo)
 	if err != nil {
 		fatalErr(err)
 	}
+	flagRawMountOptions.BindRoTry, err = splitMapOption(*flagBindRoTry)
+	if err != nil {
+		fatalErr(err)
+	}
 
 	flagRawMountOptions.BindRw, err = splitMapOption(*flagBindRw)
+	if err != nil {
+		fatalErr(err)
+	}
+	flagRawMountOptions.BindRwTry, err = splitMapOption(*flagBindRwTry)
 	if err != nil {
 		fatalErr(err)
 	}

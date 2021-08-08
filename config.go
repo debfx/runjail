@@ -25,11 +25,16 @@ type StringArray []string
 
 type configStruct struct {
 	Ro            StringArray       `yaml:"ro"`
+	RoTry         StringArray       `yaml:"ro_try"`
 	Rw            StringArray       `yaml:"rw"`
+	RwTry         StringArray       `yaml:"rw_try"`
 	Hide          StringArray       `yaml:"hide"`
+	HideTry       StringArray       `yaml:"hide_try"`
 	Empty         StringArray       `yaml:"empty"`
 	BindRo        map[string]string `yaml:"bind_ro"`
+	BindRoTry     map[string]string `yaml:"bind_ro_try"`
 	BindRw        map[string]string `yaml:"bind_rw"`
+	BindRwTry     map[string]string `yaml:"bind_rw_try"`
 	Network       string            `yaml:"network"`
 	AllowedHosts  []string          `yaml:"allowed_hosts"`
 	Ipc           *bool             `yaml:"ipc"`
