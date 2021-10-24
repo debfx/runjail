@@ -613,14 +613,20 @@ func usernsChild() error {
 	}
 
 	if settings.Seccomp != "no" {
-		seccompFilter, err := loadSeccomp(settings.Seccomp, settings.Debug)
+		seccompFilters, err := loadSeccomp(settings.Seccomp, settings.Debug)
 		if err != nil {
 			return err
 		}
-		defer seccompFilter.Release()
+		defer func() {
+			for _, filter := range seccompFilters {
+				filter.Release()
+			}
+		}()
 
-		if err := seccompFilter.Load(); err != nil {
-			return err
+		for _, filter := range seccompFilters {
+			if err := filter.Load(); err != nil {
+				return err
+			}
 		}
 	} else {
 		if _, err := syscall.Setsid(); err != nil {

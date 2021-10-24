@@ -16,6 +16,7 @@
 package main
 
 import (
+	"fmt"
 	"syscall"
 
 	seccomp "github.com/seccomp/libseccomp-golang"
@@ -30,297 +31,234 @@ type seccompRule struct {
 	OpValue2 uint64
 }
 
-func loadSeccomp(filterName string, logDenials bool) (*seccomp.ScmpFilter, error) {
-
-	filter, err := seccomp.NewFilter(seccomp.ActAllow)
+func loadFilter(defaultAction seccomp.ScmpAction, logDenials bool, rules []seccompRule) (*seccomp.ScmpFilter, error) {
+	filter, err := seccomp.NewFilter(defaultAction)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("creating new filter failed: %w", err)
 	}
 
 	api_level, err := seccomp.GetApi()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getting api version failed: %w", err)
 	}
 
 	if logDenials && api_level >= 3 {
 		err = filter.SetLogBit(true)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("enabling logging failed: %w", err)
 		}
-	}
-
-	rules := []seccompRule{}
-	actionEperm := seccomp.ActErrno.SetReturnCode(int16(syscall.EPERM))
-	actionEafnosupport := seccomp.ActErrno.SetReturnCode(int16(syscall.EAFNOSUPPORT))
-
-	// don't allow faking input to the controlling tty (CVE-2017-5226) / block TIOCSTI
-	rules = append(rules, seccompRule{
-		Action:   actionEperm,
-		Syscall:  syscall.SYS_IOCTL,
-		Arg:      1,
-		Op:       seccomp.CompareMaskedEqual,
-		OpValue1: 0xFFFFFFFF,
-		OpValue2: syscall.TIOCSTI})
-
-	if filterName != "minimal" {
-		// allow only AF_UNIX (1), AF_INET (2), AF_INET6 (10) and AF_NETLINK (16)
-		rules = append(rules, seccompRule{
-			Action:   actionEafnosupport,
-			Syscall:  syscall.SYS_SOCKET,
-			Arg:      0,
-			Op:       seccomp.CompareLess,
-			OpValue1: 1})
-		rules = append(rules, seccompRule{
-			Action:   actionEafnosupport,
-			Syscall:  syscall.SYS_SOCKET,
-			Arg:      0,
-			Op:       seccomp.CompareGreater,
-			OpValue1: 16})
-
-		for i := 3; i < 10; i++ {
-			rules = append(rules, seccompRule{
-				Action:   actionEafnosupport,
-				Syscall:  syscall.SYS_SOCKET,
-				Arg:      0,
-				Op:       seccomp.CompareEqual,
-				OpValue1: uint64(i)})
-		}
-		for i := 11; i < 16; i++ {
-			rules = append(rules, seccompRule{
-				Action:   actionEafnosupport,
-				Syscall:  syscall.SYS_SOCKET,
-				Arg:      0,
-				Op:       seccomp.CompareEqual,
-				OpValue1: uint64(i)})
-		}
-
-		blockedSyscalls := []string{
-			// copied from systemd
-
-			// @chown
-			// Change ownership of files and directories
-			"chown",
-			"chown32",
-			"fchown",
-			"fchown32",
-			"fchownat",
-			"lchown",
-			"lchown32",
-
-			// @clock
-			// Change the system time
-			"adjtimex",
-			"clock_adjtime",
-			"clock_adjtime64",
-			"clock_settime",
-			"clock_settime64",
-			"settimeofday",
-
-			// @cpu-emulation
-			// System calls for CPU emulation functionality
-			"modify_ldt",
-			"subpage_prot",
-			"switch_endian",
-			"vm86",
-			"vm86old",
-
-			// @debug
-			// Debugging, performance monitoring and tracing functionality
-			"lookup_dcookie",
-			"perf_event_open",
-			"pidfd_getfd",
-			"ptrace",
-			"rtas",
-			"s390_runtime_instr",
-			"sys_debug_setcontext",
-
-			// @keyring
-			// Kernel keyring access",
-			"add_key",
-			"keyctl",
-			"request_key",
-
-			// @module
-			// Loading and unloading of kernel modules
-			"delete_module",
-			"finit_module",
-			"init_module",
-
-			// @mount
-			// Mounting and unmounting of file systems
-			"chroot",
-			"fsconfig",
-			"fsmount",
-			"fsopen",
-			"fspick",
-			"mount",
-			"mount_setattr",
-			"move_mount",
-			"open_tree",
-			"pivot_root",
-			"umount",
-			"umount2",
-
-			// @obsolete
-			// Unusual, obsolete or unimplemented system calls
-			"_sysctl",
-			"afs_syscall",
-			"bdflush",
-			"break",
-			"create_module",
-			"ftime",
-			"get_kernel_syms",
-			"getpmsg",
-			"gtty",
-			"idle",
-			"lock",
-			"mpx",
-			"prof",
-			"profil",
-			"putpmsg",
-			"query_module",
-			"security",
-			"sgetmask",
-			"ssetmask",
-			"stime",
-			"stty",
-			"sysfs",
-			"tuxcall",
-			"ulimit",
-			"uselib",
-			"ustat",
-			"vserver",
-
-			// @privileged
-			// All system calls which need super-user capabilities
-			"_sysctl",
-			"acct",
-			"bpf",
-			//"capset",
-			"chroot",
-			"fanotify_init",
-			"fanotify_mark",
-			"nfsservctl",
-			"open_by_handle_at",
-			"pivot_root",
-			"quotactl",
-			"setdomainname",
-			"setfsuid",
-			"setfsuid32",
-			"setgroups",
-			"setgroups32",
-			"sethostname",
-			"setresuid",
-			"setresuid32",
-			"setreuid",
-			"setreuid32",
-			"setuid",
-			"setuid32",
-			"vhangup",
-
-			// @raw-io
-			// Raw I/O port access
-			"ioperm",
-			"iopl",
-			"pciconfig_iobase",
-			"pciconfig_read",
-			"pciconfig_write",
-			"s390_pci_mmio_read",
-			"s390_pci_mmio_write",
-
-			// @reboot
-			// Reboot and reboot preparation/kexec
-			"kexec_file_load",
-			"kexec_load",
-			"reboot",
-
-			// @setuid
-			// Operations for changing user/group credentials
-			"setgid",
-			"setgid32",
-			"setgroups",
-			"setgroups32",
-			"setregid",
-			"setregid32",
-			"setresgid",
-			"setresgid32",
-			"setresuid",
-			"setresuid32",
-			"setreuid",
-			"setreuid32",
-			"setuid",
-			"setuid32",
-
-			// @swap
-			// Enable/disable swap devices
-			"swapoff",
-			"swapon",
-
-			// @resources
-			// Alter resource settings
-			"ioprio_set",
-			"mbind",
-			"migrate_pages",
-			"move_pages",
-			//"nice",
-			//"sched_setaffinity",
-			//"sched_setattr",
-			//"sched_setparam",
-			//"sched_setscheduler",
-			"set_mempolicy",
-			//"setpriority",
-			//"setrlimit",
-
-			// namespaces
-			"unshare",
-			"setns",
-		}
-
-		for _, syscallName := range blockedSyscalls {
-			syscallNo, err := seccomp.GetSyscallFromName(syscallName)
-			if err != nil {
-				// skip syscalls that aren't available
-				continue
-			}
-			rules = append(rules, seccompRule{
-				Action:  actionEperm,
-				Syscall: syscallNo})
-		}
-
-		rules = append(rules, seccompRule{
-			Action:   actionEperm,
-			Syscall:  syscall.SYS_CLONE,
-			Arg:      0,
-			Op:       seccomp.CompareMaskedEqual,
-			OpValue1: syscall.CLONE_NEWUSER,
-			OpValue2: syscall.CLONE_NEWUSER})
-
-		// only allow personality(PER_LINUX)
-		rules = append(rules, seccompRule{
-			Action:   actionEperm,
-			Syscall:  syscall.SYS_PERSONALITY,
-			Arg:      0,
-			Op:       seccomp.CompareNotEqual,
-			OpValue1: 0})
 	}
 
 	for _, rule := range rules {
 		if rule.Op != seccomp.CompareInvalid {
 			condition, err := seccomp.MakeCondition(rule.Arg, rule.Op, rule.OpValue1, rule.OpValue2)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("creating condition failed: %w", err)
 			}
 			err = filter.AddRuleConditional(rule.Syscall, rule.Action, []seccomp.ScmpCondition{condition})
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("adding conditional rule failed: %w", err)
 			}
 		} else {
 			err := filter.AddRule(rule.Syscall, rule.Action)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("adding rule failed: %w", err)
 			}
 		}
 	}
 
 	return filter, nil
+}
+
+func loadSeccomp(filterName string, logDenials bool) ([]*seccomp.ScmpFilter, error) {
+	/*
+		minimal:
+			- allow by default
+			- deny mount syscalls, chroot/privot_root, new user namespace, ioctl(TIOCSTI)
+		default:
+			- ENOSYS by default
+			- allow list of syscalls
+			- EPERM on known syscalls
+		devel:
+			- like default, but addtionally allow ptrace
+
+	*/
+
+	filters := []*seccomp.ScmpFilter{}
+
+	actionEperm := seccomp.ActErrno.SetReturnCode(int16(syscall.EPERM))
+	actionEnosys := seccomp.ActErrno.SetReturnCode(int16(syscall.ENOSYS))
+	actionEafnosupport := seccomp.ActErrno.SetReturnCode(int16(syscall.EAFNOSUPPORT))
+
+	var defaultActionMain seccomp.ScmpAction
+	rulesMain := []seccompRule{}
+
+	if filterName == "minimal" {
+		defaultActionMain = seccomp.ActAllow
+
+		for _, syscallName := range SeccompMinimalEperm {
+			syscallNo, err := seccomp.GetSyscallFromName(syscallName)
+			if err != nil {
+				// skip syscalls that aren't available
+				continue
+			}
+			rulesMain = append(rulesMain, seccompRule{
+				Action:  actionEperm,
+				Syscall: syscallNo,
+			})
+		}
+
+		for _, syscallName := range SeccompMinimalEnosys {
+			syscallNo, err := seccomp.GetSyscallFromName(syscallName)
+			if err != nil {
+				// skip syscalls that aren't available
+				continue
+			}
+			rulesMain = append(rulesMain, seccompRule{
+				Action:  actionEnosys,
+				Syscall: syscallNo,
+			})
+		}
+	} else {
+		defaultActionMain = actionEnosys
+
+		for _, syscallName := range SeccompAllow {
+			syscallNo, err := seccomp.GetSyscallFromName(syscallName)
+			if err != nil {
+				// skip syscalls that aren't available
+				continue
+			}
+			rulesMain = append(rulesMain, seccompRule{
+				Action:  seccomp.ActAllow,
+				Syscall: syscallNo,
+			})
+		}
+
+		for _, syscallName := range SeccompEperm {
+			syscallNo, err := seccomp.GetSyscallFromName(syscallName)
+			if err != nil {
+				// skip syscalls that aren't available
+				continue
+			}
+			rulesMain = append(rulesMain, seccompRule{
+				Action:  actionEperm,
+				Syscall: syscallNo,
+			})
+		}
+
+		var develAction seccomp.ScmpAction
+		if filterName == "devel" {
+			develAction = seccomp.ActAllow
+		} else {
+			develAction = actionEperm
+		}
+
+		for _, syscallName := range SeccompAllowDevel {
+			syscallNo, err := seccomp.GetSyscallFromName(syscallName)
+			if err != nil {
+				// skip syscalls that aren't available
+				continue
+			}
+			rulesMain = append(rulesMain, seccompRule{
+				Action:  develAction,
+				Syscall: syscallNo,
+			})
+		}
+
+		// allow only AF_UNIX (1), AF_INET (2), AF_INET6 (10) and AF_NETLINK (16)
+		for _, i := range []int{1, 2, 10, 16} {
+			rulesMain = append(rulesMain, seccompRule{
+				Action:   seccomp.ActAllow,
+				Syscall:  syscall.SYS_SOCKET,
+				Arg:      0,
+				Op:       seccomp.CompareEqual,
+				OpValue1: uint64(i),
+			})
+		}
+
+		rulesMain = append(rulesMain, seccompRule{
+			Action:   actionEafnosupport,
+			Syscall:  syscall.SYS_SOCKET,
+			Arg:      0,
+			Op:       seccomp.CompareLess,
+			OpValue1: 1,
+		})
+		rulesMain = append(rulesMain, seccompRule{
+			Action:   actionEafnosupport,
+			Syscall:  syscall.SYS_SOCKET,
+			Arg:      0,
+			Op:       seccomp.CompareGreater,
+			OpValue1: 16,
+		})
+
+		for i := 3; i < 10; i++ {
+			rulesMain = append(rulesMain, seccompRule{
+				Action:   actionEafnosupport,
+				Syscall:  syscall.SYS_SOCKET,
+				Arg:      0,
+				Op:       seccomp.CompareEqual,
+				OpValue1: uint64(i),
+			})
+		}
+		for i := 11; i < 16; i++ {
+			rulesMain = append(rulesMain, seccompRule{
+				Action:   actionEafnosupport,
+				Syscall:  syscall.SYS_SOCKET,
+				Arg:      0,
+				Op:       seccomp.CompareEqual,
+				OpValue1: uint64(i),
+			})
+		}
+
+		// only allow personality(PER_LINUX)
+		rulesMain = append(rulesMain, seccompRule{
+			Action:   seccomp.ActAllow,
+			Syscall:  syscall.SYS_PERSONALITY,
+			Arg:      0,
+			Op:       seccomp.CompareEqual,
+			OpValue1: 0,
+		})
+		rulesMain = append(rulesMain, seccompRule{
+			Action:   actionEperm,
+			Syscall:  syscall.SYS_PERSONALITY,
+			Arg:      0,
+			Op:       seccomp.CompareNotEqual,
+			OpValue1: 0,
+		})
+	}
+
+	filterMain, err := loadFilter(defaultActionMain, logDenials, rulesMain)
+	if err != nil {
+		return nil, fmt.Errorf("loading main seccomp filter failed: %w", err)
+	}
+	filters = append(filters, filterMain)
+
+	// don't allow faking input to the controlling tty (CVE-2017-5226) / block TIOCSTI
+	rulesMaskedEqual := []seccompRule{
+		{
+			Action:   actionEperm,
+			Syscall:  syscall.SYS_IOCTL,
+			Arg:      1,
+			Op:       seccomp.CompareMaskedEqual,
+			OpValue1: 0xFFFFFFFF,
+			OpValue2: syscall.TIOCSTI,
+		},
+		{
+			Action:   actionEperm,
+			Syscall:  syscall.SYS_CLONE,
+			Arg:      0,
+			Op:       seccomp.CompareMaskedEqual,
+			OpValue1: syscall.CLONE_NEWUSER,
+			OpValue2: syscall.CLONE_NEWUSER,
+		},
+	}
+
+	filterMaskedEqual, err := loadFilter(seccomp.ActAllow, logDenials, rulesMaskedEqual)
+	if err != nil {
+		return nil, fmt.Errorf("loading masked-equal seccomp filter failed: %w", err)
+	}
+	// add after filterMain so it is evaluated first by the kernel
+	filters = append(filters, filterMaskedEqual)
+
+	return filters, nil
 }

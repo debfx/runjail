@@ -126,7 +126,7 @@ func main() {
 	flagIpc := flag.Bool("ipc", false, "Allow IPC (don't start an own IPC namespace).")
 	flagNet := flag.String("net", "no", "Enable/disable network access (yes/no).")
 	flagCwd := flag.String("cwd", ".", "Set the current working directory.")
-	flagSeccomp := flag.String("seccomp", "yes", "Enable seccomp syscall filtering (yes/minimal/no).")
+	flagSeccomp := flag.String("seccomp", "yes", "Enable seccomp syscall filtering (yes/devel/minimal/no).")
 	flagProfile := flag.StringSlice("profile", []string{}, "Enable predefined profiles (x11/wayland/flatpak).")
 	flagConfig := flag.String("config", "", "Fetch options from config file.")
 
@@ -247,7 +247,7 @@ func main() {
 		settings.Seccomp = *flagSeccomp
 	}
 
-	if settings.Seccomp != "yes" && settings.Seccomp != "minimal" && settings.Seccomp != "no" {
+	if settings.Seccomp != "yes" && settings.Seccomp != "devel" && settings.Seccomp != "minimal" && settings.Seccomp != "no" {
 		fatal(fmt.Sprintf("\"%s\" ist not a valid value for seccomp", settings.Seccomp))
 	}
 
