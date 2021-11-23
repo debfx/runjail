@@ -320,7 +320,18 @@ func parseRawMountOptions(options rawMountOptions) ([]mount, error) {
 	return mounts, nil
 }
 
-func mergeMounts(low []mount, high []mount) []mount {
+func removeLastPathPart(path string) string {
+	index := strings.LastIndex(path, "/")
+	if index == -1 {
+		return path
+	}
+	if index == 0 {
+		return "/"
+	}
+	return path[:index]
+}
+
+func mergeMounts(low []mount, high []mount, debug bool) []mount {
 	flagMountTargets := []string{}
 	previousMountTargets := []string{}
 
@@ -339,8 +350,20 @@ func mergeMounts(low []mount, high []mount) []mount {
 	previousMountTargets = append(previousMountTargets, flagMountTargets...)
 
 	for _, mount := range low {
-		if isStringInSlice(mount.Path, previousMountTargets) {
-			// this mountpoint already exists from a higher priority source, skip
+		path := mount.Path
+		// skip if this or a parent path is present in a `high` mount
+		skipMount := false
+		for path != "/" {
+			if isStringInSlice(path, previousMountTargets) {
+				if debug {
+					fmt.Printf("Skipping mount \"%s\", superseded by mount \"%s\"\n", mount.Path, path)
+				}
+				skipMount = true
+				break
+			}
+			path = removeLastPathPart(path)
+		}
+		if skipMount {
 			continue
 		}
 		if isStringInSlice(mount.Path, flagMountTargets) {

@@ -323,7 +323,7 @@ func main() {
 			fatalErr(err)
 		}
 
-		mounts = mergeMounts(mounts, profile.Mounts)
+		mounts = mergeMounts(mounts, profile.Mounts, settings.Debug)
 		for key, value := range profile.EnvVars {
 			envVars[key] = value
 		}
@@ -335,8 +335,8 @@ func main() {
 		settings.DbusBroadcast = append(settings.DbusBroadcast, profile.Settings.DbusBroadcast...)
 	}
 
-	mounts = mergeMounts(mounts, configMountOptions)
-	mounts = mergeMounts(mounts, flagMountOptions)
+	mounts = mergeMounts(mounts, configMountOptions, settings.Debug)
+	mounts = mergeMounts(mounts, flagMountOptions, settings.Debug)
 
 	if len(settings.DbusOwn) > 0 || len(settings.DbusTalk) > 0 || len(settings.DbusCall) > 0 || len(settings.DbusBroadcast) > 0 {
 		pipe, dbusMount, cleanupFile, err := setupDbusProxy(settings)
@@ -351,7 +351,7 @@ func main() {
 			fatalErr(err)
 		}
 		settings.SyncFds = append(settings.SyncFds, pipe)
-		mounts = mergeMounts(mounts, []mount{dbusMount})
+		mounts = mergeMounts(mounts, []mount{dbusMount}, settings.Debug)
 	}
 
 	if len(settings.AllowedHosts) > 0 {
@@ -373,7 +373,7 @@ func main() {
 		}
 		settings.SyncFds = append(settings.SyncFds, pipe)
 		settings.Helpers = append(settings.Helpers, []string{"/proc/self/exe", "http-proxy-forwarder"})
-		mounts = mergeMounts(mounts, []mount{proxyMount})
+		mounts = mergeMounts(mounts, []mount{proxyMount}, settings.Debug)
 		envVars["http_proxy"] = "http://localhost:18080/"
 		envVars["https_proxy"] = "http://localhost:18080/"
 	}
