@@ -203,20 +203,20 @@ func parseRawMountBind(path string, other string, readonly bool, optional bool) 
 }
 
 func parseRawMountOptions(options rawMountOptions) ([]mount, error) {
-	mounts := []mount{}
+	parsedMounts := []mount{}
 
 	for _, path := range options.Ro {
 		mount, err := parseRawMountBind(path, path, true, false)
 		if err != nil {
 			return nil, err
 		}
-		mounts = append(mounts, mount)
+		parsedMounts = append(parsedMounts, mount)
 	}
 
 	for _, path := range options.RoTry {
 		mount, err := parseRawMountBind(path, path, true, true)
 		if err == nil {
-			mounts = append(mounts, mount)
+			parsedMounts = append(parsedMounts, mount)
 		} else if !errors.Is(err, os.ErrNotExist) {
 			return nil, err
 		}
@@ -227,13 +227,13 @@ func parseRawMountOptions(options rawMountOptions) ([]mount, error) {
 		if err != nil {
 			return nil, err
 		}
-		mounts = append(mounts, mount)
+		parsedMounts = append(parsedMounts, mount)
 	}
 
 	for _, path := range options.RwTry {
 		mount, err := parseRawMountBind(path, path, false, true)
 		if err == nil {
-			mounts = append(mounts, mount)
+			parsedMounts = append(parsedMounts, mount)
 		} else if !errors.Is(err, os.ErrNotExist) {
 			return nil, err
 		}
@@ -246,7 +246,7 @@ func parseRawMountOptions(options rawMountOptions) ([]mount, error) {
 		}
 
 		mount := mount{Path: pathProcessed, Type: mountTypeHide}
-		mounts = append(mounts, mount)
+		parsedMounts = append(parsedMounts, mount)
 	}
 
 	for _, path := range options.HideTry {
@@ -256,7 +256,7 @@ func parseRawMountOptions(options rawMountOptions) ([]mount, error) {
 		}
 
 		mount := mount{Path: pathProcessed, Type: mountTypeHide, Optional: true}
-		mounts = append(mounts, mount)
+		parsedMounts = append(parsedMounts, mount)
 	}
 
 	for _, path := range options.Empty {
@@ -266,7 +266,7 @@ func parseRawMountOptions(options rawMountOptions) ([]mount, error) {
 		}
 
 		mount := mount{Path: pathProcessed, Type: mountTypeEmpty}
-		mounts = append(mounts, mount)
+		parsedMounts = append(parsedMounts, mount)
 	}
 
 	for source, path := range options.BindRo {
@@ -274,13 +274,13 @@ func parseRawMountOptions(options rawMountOptions) ([]mount, error) {
 		if err != nil {
 			return nil, err
 		}
-		mounts = append(mounts, mount)
+		parsedMounts = append(parsedMounts, mount)
 	}
 
 	for source, path := range options.BindRoTry {
 		mount, err := parseRawMountBind(path, source, true, true)
 		if err == nil {
-			mounts = append(mounts, mount)
+			parsedMounts = append(parsedMounts, mount)
 		} else if !errors.Is(err, os.ErrNotExist) {
 			return nil, err
 		}
@@ -291,13 +291,13 @@ func parseRawMountOptions(options rawMountOptions) ([]mount, error) {
 		if err != nil {
 			return nil, err
 		}
-		mounts = append(mounts, mount)
+		parsedMounts = append(parsedMounts, mount)
 	}
 
 	for source, path := range options.BindRwTry {
 		mount, err := parseRawMountBind(path, source, false, true)
 		if err == nil {
-			mounts = append(mounts, mount)
+			parsedMounts = append(parsedMounts, mount)
 		} else if !errors.Is(err, os.ErrNotExist) {
 			return nil, err
 		}
@@ -314,10 +314,25 @@ func parseRawMountOptions(options rawMountOptions) ([]mount, error) {
 		}
 
 		mount := mount{Path: pathProcessed, Other: otherProcessed, Type: mountTypeSymlink}
-		mounts = append(mounts, mount)
+		parsedMounts = append(parsedMounts, mount)
 	}
 
-	return mounts, nil
+	seenMounts := make(map[string]mount)
+	resultMounts := []mount{}
+	for _, mount := range parsedMounts {
+		previousMount, duplicateMount := seenMounts[mount.Path]
+		if duplicateMount {
+			if previousMount != mount {
+				return nil, fmt.Errorf("Mount \"%s\" has been specified twice", mount.Path)
+			}
+			// duplicate but equal mount, silently skip
+		} else {
+			seenMounts[mount.Path] = mount
+			resultMounts = append(resultMounts, mount)
+		}
+	}
+
+	return resultMounts, nil
 }
 
 func removeLastPathPart(path string) string {
@@ -338,8 +353,7 @@ func mergeMounts(low []mount, high []mount, debug bool) []mount {
 
 	for _, mount := range high {
 		if isStringInSlice(mount.Path, highMountTargets) {
-			// this mountpoint already exists from the same source, error
-			panic(mount.Path)
+			continue
 		}
 
 		mountResult = append(mountResult, mount)
@@ -360,12 +374,8 @@ func mergeMounts(low []mount, high []mount, debug bool) []mount {
 			}
 			path = removeLastPathPart(path)
 		}
-		if skipMount {
+		if skipMount || isStringInSlice(mount.Path, lowMountTargets) {
 			continue
-		}
-		if isStringInSlice(mount.Path, lowMountTargets) {
-			// this mountpoint already exists from the same source, error
-			panic(mount.Path)
 		}
 
 		mountResult = append(mountResult, mount)
