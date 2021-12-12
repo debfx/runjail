@@ -332,29 +332,26 @@ func removeLastPathPart(path string) string {
 }
 
 func mergeMounts(low []mount, high []mount, debug bool) []mount {
-	flagMountTargets := []string{}
-	previousMountTargets := []string{}
-
+	highMountTargets := []string{}
+	lowMountTargets := []string{}
 	mountResult := []mount{}
 
 	for _, mount := range high {
-		if isStringInSlice(mount.Path, flagMountTargets) {
+		if isStringInSlice(mount.Path, highMountTargets) {
 			// this mountpoint already exists from the same source, error
 			panic(mount.Path)
 		}
 
 		mountResult = append(mountResult, mount)
-		flagMountTargets = append(flagMountTargets, mount.Path)
+		highMountTargets = append(highMountTargets, mount.Path)
 	}
-
-	previousMountTargets = append(previousMountTargets, flagMountTargets...)
 
 	for _, mount := range low {
 		path := mount.Path
 		// skip if this or a parent path is present in a `high` mount
 		skipMount := false
 		for path != "/" {
-			if isStringInSlice(path, previousMountTargets) {
+			if isStringInSlice(path, highMountTargets) {
 				if debug {
 					fmt.Printf("Skipping mount \"%s\", superseded by mount \"%s\"\n", mount.Path, path)
 				}
@@ -366,13 +363,13 @@ func mergeMounts(low []mount, high []mount, debug bool) []mount {
 		if skipMount {
 			continue
 		}
-		if isStringInSlice(mount.Path, flagMountTargets) {
+		if isStringInSlice(mount.Path, lowMountTargets) {
 			// this mountpoint already exists from the same source, error
 			panic(mount.Path)
 		}
 
 		mountResult = append(mountResult, mount)
-		flagMountTargets = append(flagMountTargets, mount.Path)
+		lowMountTargets = append(lowMountTargets, mount.Path)
 	}
 
 	return mountResult
