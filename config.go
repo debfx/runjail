@@ -47,7 +47,6 @@ type configStruct struct {
 	Profiles      StringArray       `yaml:"profiles"`
 	FlatpakName   string            `yaml:"flatpak_name"`
 	Command       StringArray       `yaml:"command"`
-	Backend       string            `yaml:"backend"`
 }
 
 // parse yaml array as slice

@@ -16,32 +16,30 @@
 package main
 
 type settingsStruct struct {
-	Debug          bool
-	Network        bool
-	AllowedHosts   []string
-	Ipc            bool
-	Cwd            string
-	Seccomp        string
-	DbusOwn        []string
-	DbusTalk       []string
-	DbusCall       []string
-	DbusBroadcast  []string
-	Profiles       []string
-	FlatpakName    string
-	SyncFds        []uintptr
-	Command        []string
-	OverrideArg0   string
-	SandboxBackend string
-	Helpers        [][]string
+	Debug         bool
+	Network       bool
+	AllowedHosts  []string
+	Ipc           bool
+	Cwd           string
+	Seccomp       string
+	DbusOwn       []string
+	DbusTalk      []string
+	DbusCall      []string
+	DbusBroadcast []string
+	Profiles      []string
+	FlatpakName   string
+	SyncFds       []uintptr
+	Command       []string
+	OverrideArg0  string
+	Helpers       [][]string
 }
 
 func getDefaultSettings() settingsStruct {
 	return settingsStruct{
-		Debug:          false,
-		Network:        false,
-		Ipc:            false,
-		Cwd:            ".",
-		Seccomp:        "yes",
-		SandboxBackend: "userns",
+		Debug:   false,
+		Network: false,
+		Ipc:     false,
+		Cwd:     ".",
+		Seccomp: "yes",
 	}
 }

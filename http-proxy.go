@@ -143,7 +143,6 @@ func setupHttpProxy(originalSettings settingsStruct) (proxyPipe uintptr, proxyMo
 	settings.OverrideArg0 = os.Args[0]
 	settings.Network = true
 	settings.Debug = originalSettings.Debug
-	settings.SandboxBackend = originalSettings.SandboxBackend
 
 	_, err = run(settings, mountOptions, os.Environ(), true)
 	if err != nil {

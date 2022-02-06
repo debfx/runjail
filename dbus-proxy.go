@@ -109,7 +109,6 @@ func setupDbusProxy(originalSettings settingsStruct) (proxyPipe uintptr, dbusMou
 	settings.Command = []string{dbusProxyBin, "--args=" + strconv.Itoa(int(argsFile.Fd()))}
 	settings.Network = false
 	settings.Debug = originalSettings.Debug
-	settings.SandboxBackend = originalSettings.SandboxBackend
 
 	_, err = run(settings, mountOptions, os.Environ(), true)
 	if err != nil {
