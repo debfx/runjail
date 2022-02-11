@@ -126,6 +126,7 @@ func main() {
 	flagIpc := flag.Bool("ipc", false, "Allow IPC (don't start an own IPC namespace).")
 	flagNet := flag.String("net", "no", "Enable/disable network access (yes/no).")
 	flagCwd := flag.String("cwd", ".", "Set the current working directory.")
+	flagEnv := flag.StringSlice("env", []string{}, "Set the environemnt variable (Format: \"name=Value\").")
 	flagSeccomp := flag.String("seccomp", "yes", "Enable seccomp syscall filtering (yes/devel/minimal/no).")
 	flagProfile := flag.StringSlice("profile", []string{}, "Enable predefined profiles (x11/wayland/flatpak).")
 	flagConfig := flag.String("config", "", "Fetch options from config file.")
@@ -164,6 +165,12 @@ func main() {
 	defaultMountOptions, err := parseRawMountOptions(defaultRawMountOptions)
 	if err != nil {
 		fatalErr(err)
+	}
+
+	envVars := map[string]string{}
+	for _, item := range os.Environ() {
+		splits := strings.SplitN(item, "=", 2)
+		envVars[splits[0]] = splits[1]
 	}
 
 	var configMountOptions []mount
@@ -222,6 +229,10 @@ func main() {
 			settings.Command = config.Command
 		}
 
+		for name, value := range config.Environment {
+			envVars[name] = value
+		}
+
 		settings.DbusOwn = append(settings.DbusOwn, config.DbusOwn...)
 		settings.DbusTalk = append(settings.DbusTalk, config.DbusTalk...)
 		settings.DbusCall = append(settings.DbusCall, config.DbusCall...)
@@ -243,12 +254,21 @@ func main() {
 	if flag.Lookup("cwd").Changed {
 		settings.Cwd = *flagCwd
 	}
+	if flag.Lookup("env").Changed {
+		for _, env := range *flagEnv {
+			splits := strings.SplitN(env, "=", 2)
+			if len(splits) != 2 {
+				fatal(fmt.Sprintf("\"%s\" is not a valid format for --env (required: name=value)", env))
+			}
+			envVars[splits[0]] = splits[1]
+		}
+	}
 	if flag.Lookup("seccomp").Changed {
 		settings.Seccomp = *flagSeccomp
 	}
 
 	if settings.Seccomp != "yes" && settings.Seccomp != "devel" && settings.Seccomp != "minimal" && settings.Seccomp != "no" {
-		fatal(fmt.Sprintf("\"%s\" ist not a valid value for seccomp", settings.Seccomp))
+		fatal(fmt.Sprintf("\"%s\" is not a valid value for seccomp", settings.Seccomp))
 	}
 
 	if flag.Lookup("profile").Changed {
@@ -312,11 +332,7 @@ func main() {
 	}
 
 	mounts := defaultMountOptions
-	envVars := map[string]string{}
-	for _, item := range os.Environ() {
-		splits := strings.SplitN(item, "=", 2)
-		envVars[splits[0]] = splits[1]
-	}
+
 	for _, profileName := range settings.Profiles {
 		profile, err := getProfile(profileName, settings)
 		if err != nil {

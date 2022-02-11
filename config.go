@@ -43,6 +43,7 @@ type configStruct struct {
 	DbusCall      []string          `yaml:"dbus_call"`
 	DbusBroadcast []string          `yaml:"dbus_broadcast"`
 	Cwd           string            `yaml:"cwd"`
+	Environment   map[string]string `yaml:"environment"`
 	Seccomp       string            `yaml:"seccomp"`
 	Profiles      StringArray       `yaml:"profiles"`
 	FlatpakName   string            `yaml:"flatpak_name"`
