@@ -1,0 +1,49 @@
+# bind-mount paths read-write or read-only into the sandbox
+# also available as bind_rw_try and bind_ro_try which doesn't fail if the source doesn't exist
+bind_rw:
+  "~/apps/test": "~"
+bind_ro:
+  "/host/path": "/sandbox/path"
+# bind-mount paths read-write or read-only into the sandbox on the same path
+# also available as rw_try and ro_try which doesn't fail if the source doesn't exist
+rw:
+  - "~/data"
+ro:
+  - "$XDG_RUNTIME_DIR/pulse"
+# make files/directories inaccessible
+# also available as hide_try which doesn't fail if the path doesn't exist
+hide:
+  - "/sys"
+# mount an empty tmpfs on the specified directories
+empty:
+  - /etc/xyz
+# enable a set of access inside the sandbox
+profiles:
+  - wayland
+  - x11
+# enable syscall filtering: "yes" (default), "devel", "minimal" or "no"
+seccomp: "yes"
+# enable network access: "yes" or "no" (Default)
+network: "yes"
+# when network access is disabled, start a http proxy
+# that allows connecting to these hosts
+allowed_hosts:
+  - "example.org"
+# allow IPC (don't start an own IPC namespace):  true or false (default)
+ipc: true
+# allow the sandbox to own this name on the session D-Bus
+dbus_own:
+  - "app.example.org"
+# allow the sandbox to talk to this name on D-Bus
+dbus_talk:
+  - "org.freedesktop.Notifications"
+# set current working directory
+cwd: "~"
+# set environment variables
+environment:
+  NAME: "VALUE"
+# command to run
+command:
+  - "application"
+  - "--arg1"
+  - "--arg2"

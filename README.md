@@ -39,19 +39,25 @@ the parameter `-nolisten local`.
 
 ```
 usage: runjail [--flag [--flag ...]] -- [command [command ...]]:
---bind-ro strings   Bind mount source file/directory from parent namespace to target read-only (Format: "source:target").
---bind-rw strings   Bind mount source file/directory from parent namespace to target read-write (Format: "source:target").
---config string     Fetch options from config file.
---cwd string        Set the current working directory. (default ".")
---debug             Enable debug mode.
---empty strings     Mount empty tmpfs on the specified path.
---hide strings      Make file/directory inaccessible.
---ipc               Allow IPC (don't start an own IPC namespace).
---net string        Enable/disable network access (yes/no). (default "no")
---profile strings   Enable predefined profiles (x11/wayland/flatpak).
---ro strings        Mount file/directory from parent namespace read-only.
---rw strings        Mount file/directory from parent namespace read-write.
---seccomp string    Enable seccomp syscall filtering (yes/minimal/no). (default "yes")
+--bind-ro strings       Bind mount source file/directory from parent namespace to target read-only (format: "source:target").
+--bind-ro-try strings   Bind mount source file/directory from parent namespace to target read-only (format: "source:target"). Ignores non-existent source.
+--bind-rw strings       Bind mount source file/directory from parent namespace to target read-write (format: "source:target").
+--bind-rw-try strings   Bind mount source file/directory from parent namespace to target read-write (format: "source:target"). Ignores non-existent source.
+--config string         Fetch options from config file.
+--cwd string            Set the current working directory. (default ".")
+--debug                 Enable debug mode.
+--empty strings         Mount empty tmpfs on the specified directory.
+--env strings           Set the environemnt variable (format: "name=value").
+--hide strings          Make file/directory inaccessible.
+--hide-try strings      Make file/directory inaccessible. Ignore non-existent path.
+--ipc                   Allow IPC (don't start an own IPC namespace).
+--net string            Enable/disable network access <yes|no>. (default "no")
+--profile strings       Enable predefined profile: <x11|wayland|flatpak>.
+--ro strings            Mount file/directory from parent namespace read-only.
+--ro-try strings        Mount file/directory from parent namespace read-only. Ignores non-existent source.
+--rw strings            Mount file/directory from parent namespace read-write.
+--rw-try strings        Mount file/directory from parent namespace read-write. Ignores non-existent source.
+--seccomp string        Enable seccomp syscall filtering: <yes|devel|minimal|no>. (default "yes")
 ```
 
 
@@ -66,6 +72,15 @@ usage: runjail [--flag [--flag ...]] -- [command [command ...]]:
   `runjail --cwd ~ --bind-rw ~/firefox-test:~ --rw ~/Downloads --profile x11 --net=yes -- firefox -no-remote`
 
 
+# Config
+
+Instead of passing all settings on the command line you can use --config to read a config file.
+
+A commented example is provided in [config-sample.yml](config-sample.yml)
+
+Wherever paths are accepted `$UID`, `$USER`, `$HOME` and `$XDG_RUNTIME_DIR` with their respective values.
+
+
 # Requirements
 
 runjail is tested on Linux >= 4.19
@@ -73,7 +88,7 @@ runjail is tested on Linux >= 4.19
 It uses unprvileged user namespaces which is disabled by default on some
 distributions.
 
-To enable it on Debian the sysctl `kernel.unprivileged_userns_clone` needs
+To enable it on Debian (<= 10) the sysctl `kernel.unprivileged_userns_clone` needs
 to be set to `1`.
 
 
