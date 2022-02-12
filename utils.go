@@ -40,6 +40,14 @@ const (
 	F_SEAL_WRITE  = 0x0008
 )
 
+func getUsername() (string, error) {
+	user, err := user.Current()
+	if err != nil {
+		return "", err
+	}
+	return user.Username, nil
+}
+
 func getUserHomeDir() (string, error) {
 	if env := os.Getenv("HOME"); env != "" {
 		return env, nil

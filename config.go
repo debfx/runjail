@@ -16,7 +16,11 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
+	"os"
+	"strconv"
+	"strings"
 
 	"gopkg.in/yaml.v2"
 )
@@ -68,11 +72,65 @@ func (a *StringArray) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	return nil
 }
 
-func parseConfig(path string) (config configStruct, err error) {
+func replaceAllSlice(list []string, replacer *strings.Replacer) {
+	for i, value := range list {
+		list[i] = replacer.Replace(value)
+	}
+}
+
+func replaceAllMap(stringMap map[string]string, replacer *strings.Replacer) {
+	for key, value := range stringMap {
+		stringMap[key] = replacer.Replace(value)
+	}
+}
+
+func parseConfig(path string) (configStruct, error) {
 	configContent, err := ioutil.ReadFile(path)
 	if err != nil {
-		return
+		return configStruct{}, fmt.Errorf("failed to read config file: %w", err)
 	}
+
+	var config configStruct
 	err = yaml.Unmarshal(configContent, &config)
-	return
+	if err != nil {
+		return configStruct{}, fmt.Errorf("failed to parse config file: %w", err)
+	}
+
+	username, err := getUsername()
+	if err != nil {
+		return configStruct{}, fmt.Errorf("failed to get username: %w", err)
+	}
+
+	homeDir, err := getUserHomeDir()
+	if err != nil {
+		return configStruct{}, fmt.Errorf("failed to get user home dir: %w", err)
+	}
+
+	runtimeDir, err := getUserRuntimeDir()
+	if err != nil {
+		return configStruct{}, fmt.Errorf("failed to get user runtime dir: %w", err)
+	}
+
+	replacer := strings.NewReplacer(
+		"$UID", strconv.Itoa(os.Getuid()),
+		"$USER", username,
+		"$HOME", homeDir,
+		"$XDG_RUNTIME_DIR", runtimeDir,
+	)
+
+	replaceAllSlice(config.Ro, replacer)
+	replaceAllSlice(config.RoTry, replacer)
+	replaceAllSlice(config.Rw, replacer)
+	replaceAllSlice(config.RwTry, replacer)
+	replaceAllSlice(config.Hide, replacer)
+	replaceAllSlice(config.HideTry, replacer)
+	replaceAllSlice(config.Empty, replacer)
+	replaceAllSlice(config.Command, replacer)
+
+	replaceAllMap(config.BindRo, replacer)
+	replaceAllMap(config.BindRoTry, replacer)
+	replaceAllMap(config.BindRw, replacer)
+	replaceAllMap(config.BindRwTry, replacer)
+
+	return config, nil
 }
