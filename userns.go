@@ -156,18 +156,6 @@ func usernsRun(exe string, settings settingsStruct, mounts []mount, environ []st
 	return int(dataRead[0]), nil
 }
 
-/*func writeStringToFile(filename string, data string) error {
-	f, err := os.OpenFile(filename, os.O_WRONLY|os.O_TRUNC, 0)
-	if err != nil {
-		return err
-	}
-	_, err = f.WriteString(data)
-	if err1 := f.Close(); err == nil {
-		err = err1
-	}
-	return err
-}*/
-
 func mountPrivatePropagation() error {
 	return syscall.Mount("none", "/", "", syscall.MS_REC|syscall.MS_PRIVATE, "")
 }
