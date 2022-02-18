@@ -1,6 +1,7 @@
 // Copyright 2016 The Go Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE.BSD file.
+// SPDX-License-Identifier: BSD-3-Clause
 
 // +build aix darwin dragonfly freebsd js,wasm !android,linux netbsd openbsd solaris
 // +build !cgo
