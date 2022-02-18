@@ -23,7 +23,7 @@ current directory.
 
 # Security considerations
 
-Without any parameters runjail mounts /etc, /sys, /usr and /var read-only
+Without any parameters runjail mounts /etc, /sys and /usr read-only
 in the sandbox. Additionally /proc is mounted.
 Make sure these directiories don't contain any secret user-readable data
 or disable access to them by passing `--hide PATH`.

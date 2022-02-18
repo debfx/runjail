@@ -98,7 +98,7 @@ func getDefaultOptions() (rawMountOptions, error) {
 			} else {
 				defaults.Ro = append(defaults.Ro, absolutePath)
 			}
-		} else if isStringInSlice(file.Name(), []string{"etc", "selinux", "sys", "usr", "var"}) {
+		} else if isStringInSlice(file.Name(), []string{"etc", "selinux", "sys", "usr"}) {
 			// ideally we'd mount a new sysfs but the kernel only allows this if we are admin of the network namespace
 			defaults.Ro = append(defaults.Ro, absolutePath)
 		}
