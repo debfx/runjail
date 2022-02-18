@@ -73,13 +73,14 @@ func getDefaultOptions() (rawMountOptions, error) {
 	defaults.Ro = []string{}
 	defaults.Rw = []string{"/dev/null", "/dev/zero", "/dev/full", "/dev/random", "/dev/urandom", "/dev/tty"}
 	defaults.BindRw = make(map[string]string)
-	defaults.Empty = []string{"/tmp", "/var/tmp", "/dev/shm", userHomeDir, userRuntimeDir}
+	defaults.Empty = []string{"/tmp", "/var/tmp", "/dev/shm", "/run/lock", userHomeDir, userRuntimeDir}
 	defaults.Symlink = make(map[string]string)
 	defaults.Symlink["/dev/fd"] = "/proc/self/fd"
 	defaults.Symlink["/dev/stdin"] = "/proc/self/fd/0"
 	defaults.Symlink["/dev/stdout"] = "/proc/self/fd/1"
 	defaults.Symlink["/dev/stderr"] = "/proc/self/fd/2"
 	defaults.Symlink["/dev/ptmx"] = "/dev/pts/ptmx"
+	defaults.Symlink["/run/shm"] = "/dev/shm"
 	defaults.HideTry = []string{
 		"/proc/asound",
 		"/proc/acpi",
