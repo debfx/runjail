@@ -555,7 +555,7 @@ func usernsChild() error {
 		return fmt.Errorf("failed to unmount oldroot: %w", err)
 	}
 
-	// open our temporary root dir so we can unmount it once newroot is "/""
+	// open our temporary root dir so we can unmount it once newroot is "/"
 	tmpRootFd, err := syscall.Open("/", syscall.O_DIRECTORY, syscall.O_RDONLY)
 	if err != nil {
 		return fmt.Errorf("failed to open temorary root directory: %w", err)
