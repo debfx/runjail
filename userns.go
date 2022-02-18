@@ -367,12 +367,12 @@ func usernsChild() error {
 
 	if passStruct.ReturnCodeFd != -1 {
 		if err := setCloseOnExec(uintptr(passStruct.ReturnCodeFd)); err != nil {
-			return fmt.Errorf("failed to clear O_CLOEXEC on fd %d: %w", passStruct.ReturnCodeFd, err)
+			return fmt.Errorf("failed to set O_CLOEXEC on fd %d: %w", passStruct.ReturnCodeFd, err)
 		}
 	}
 	for _, fd := range settings.SyncFds {
 		if err := setCloseOnExec(fd); err != nil {
-			return fmt.Errorf("failed to clear O_CLOEXEC on fd %d: %w", fd, err)
+			return fmt.Errorf("failed to set O_CLOEXEC on fd %d: %w", fd, err)
 		}
 	}
 
