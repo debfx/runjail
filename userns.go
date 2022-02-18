@@ -381,7 +381,7 @@ func usernsChild() error {
 	}
 
 	tmpDir := os.TempDir()
-	if err := mountTmpfs(tmpDir, "550", false); err != nil {
+	if err := mountTmpfs(tmpDir, "700", false); err != nil {
 		return fmt.Errorf("mount tmpfs on base dir failed: %w", err)
 	}
 	if err := os.Chdir(tmpDir); err != nil {
