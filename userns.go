@@ -535,6 +535,11 @@ func usernsChild() error {
 		}
 	}
 
+	// not a security measure, but it seems sane to not have the root dir user-writable
+	if err := os.Chmod("/newroot", 0555); err != nil {
+		return fmt.Errorf("chmod / on new root failed: %w", err)
+	}
+
 	// make sure the mount is private so we don't proprage the umount() to the outside
 	if err := syscall.Mount("oldroot", "oldroot", "", syscall.MS_REC|syscall.MS_PRIVATE, ""); err != nil {
 		return fmt.Errorf("failed to make oldroot mount private: %w", err)
