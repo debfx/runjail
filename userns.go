@@ -540,6 +540,14 @@ func usernsChild() error {
 		return fmt.Errorf("chmod / on new root failed: %w", err)
 	}
 
+	// no need to keep those around
+	if err := os.Remove("/hidefile"); err != nil {
+		return fmt.Errorf("failed to remove hidefile: %w", err)
+	}
+	if err := os.Remove("/hidedir"); err != nil {
+		return fmt.Errorf("failed to rmeove hidedir: %w", err)
+	}
+
 	// make sure the mount is private so we don't proprage the umount() to the outside
 	if err := syscall.Mount("oldroot", "oldroot", "", syscall.MS_REC|syscall.MS_PRIVATE, ""); err != nil {
 		return fmt.Errorf("failed to make oldroot mount private: %w", err)
