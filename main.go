@@ -113,6 +113,7 @@ func main() {
 	flagDebug := flag.Bool("debug", false, "Enable debug mode.")
 	flagIpc := flag.Bool("ipc", false, "Allow IPC (don't start an own IPC namespace).")
 	flagNet := flag.String("net", "no", "Enable/disable network access <yes|no>.")
+	flagAllowHost := flag.StringSlice("allow-host", []string{}, "Allow connecting to <host> through a HTTP proxy.")
 	flagCwd := flag.String("cwd", ".", "Set the current working directory.")
 	flagEnv := flag.StringSlice("env", []string{}, "Set the environemnt variable (format: \"name=value\").")
 	flagSeccomp := flag.String("seccomp", "yes", "Enable seccomp syscall filtering: <yes|devel|minimal|no>.")
@@ -238,6 +239,9 @@ func main() {
 		if err != nil {
 			fatalErr(err)
 		}
+	}
+	if flag.Lookup("allow-host").Changed {
+		settings.AllowedHosts = append(settings.AllowedHosts, *flagAllowHost...)
 	}
 	if flag.Lookup("cwd").Changed {
 		settings.Cwd = *flagCwd
