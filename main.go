@@ -115,7 +115,7 @@ func main() {
 	flagNet := flag.String("net", "no", "Enable/disable network access <yes|no>.")
 	flagAllowHost := flag.StringSlice("allow-host", []string{}, "Allow connecting to <host> through a HTTP proxy.")
 	flagCwd := flag.String("cwd", ".", "Set the current working directory.")
-	flagEnv := flag.StringSlice("env", []string{}, "Set the environemnt variable (format: \"name=value\").")
+	flagEnv := flag.StringSlice("env", []string{}, "Set the environment variable (format: \"name=value\").")
 	flagSeccomp := flag.String("seccomp", "yes", "Enable seccomp syscall filtering: <yes|devel|minimal|no>.")
 	flagProfile := flag.StringSlice("profile", []string{}, "Enable predefined profile: <x11|wayland|flatpak>.")
 	flagConfig := flag.String("config", "", "Fetch options from config file.")
