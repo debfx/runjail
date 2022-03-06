@@ -47,7 +47,7 @@ usage: runjail [--flag [--flag ...]] -- [command [command ...]]:
 --cwd string            Set the current working directory. (default ".")
 --debug                 Enable debug mode.
 --empty strings         Mount empty tmpfs on the specified directory.
---env strings           Set the environemnt variable (format: "name=value").
+--env strings           Set the environment variable (format: "name=value").
 --hide strings          Make file/directory inaccessible.
 --hide-try strings      Make file/directory inaccessible. Ignore non-existent path.
 --ipc                   Allow IPC (don't start an own IPC namespace).
