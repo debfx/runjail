@@ -277,7 +277,7 @@ func main() {
 	if err != nil {
 		fatalErr(fmt.Errorf("executable does not exist: %w", err))
 	}
-	settings.Command[0], err = preprocessPath(settings.Command[0], true)
+	settings.Command[0], err = preprocessPath(settings.Command[0], false)
 	if err != nil {
 		fatalErr(err)
 	}
