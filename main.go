@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -273,13 +274,17 @@ func main() {
 		settings.Command = flag.Args()
 	}
 
+	settings.Command[0], err = pathExpandUser(settings.Command[0])
+	if err != nil {
+		fatalErr(fmt.Errorf("failed to expand executable path: %w", err))
+	}
 	settings.Command[0], err = exec.LookPath(settings.Command[0])
 	if err != nil {
 		fatalErr(fmt.Errorf("executable does not exist: %w", err))
 	}
-	settings.Command[0], err = preprocessPath(settings.Command[0], false)
+	settings.Command[0], err = filepath.Abs(settings.Command[0])
 	if err != nil {
-		fatalErr(err)
+		fatalErr(fmt.Errorf("failed to look up absolute path: %w", err))
 	}
 
 	settings.Cwd, err = preprocessPath(settings.Cwd, false)
