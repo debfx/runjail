@@ -69,6 +69,7 @@ func getDefaultOptions() (rawMountOptions, error) {
 	defaults.Symlink["/dev/stderr"] = "/proc/self/fd/2"
 	defaults.Symlink["/dev/ptmx"] = "/dev/pts/ptmx"
 	defaults.Symlink["/run/shm"] = "/dev/shm"
+	defaults.Symlink["/var/run"] = "/run"
 	defaults.HideTry = []string{
 		"/proc/asound",
 		"/proc/acpi",
