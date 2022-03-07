@@ -221,7 +221,7 @@ func remountReadOnly(path string, existingFlags int) error {
 	return syscall.Mount(path, path, "", uintptr(existingFlags|syscall.MS_REMOUNT|syscall.MS_REC|syscall.MS_BIND|syscall.MS_RDONLY), "")
 }
 
-func mountBind(source string, target string, readOnly bool) error {
+func mountBind(source string, target string, readOnly bool, debug bool) error {
 	sourceInfo, err := os.Stat(source)
 	if err != nil {
 		return err
@@ -263,6 +263,10 @@ func mountBind(source string, target string, readOnly bool) error {
 			err = unix.Stat(mountEntry.mountPoint, &mountPointStat)
 			if err != nil {
 				if os.IsNotExist(err) || os.IsPermission(err) {
+					if debug {
+						// strip /newroot/ from mountEntry.mountPoint
+						fmt.Printf("Skipped remounting as read-only: %s\n", mountEntry.mountPoint[8:])
+					}
 					continue
 				} else {
 					return fmt.Errorf("failed to stat %s: %w", mountEntry.mountPoint, err)
@@ -447,14 +451,14 @@ func usernsChild() error {
 			if settings.Debug {
 				fmt.Printf("Bind-mounting (read-only) %s on %s\n", mount.Other, newDirRelative)
 			}
-			if err := mountBind(oldDir, newDir, true); err != nil {
+			if err := mountBind(oldDir, newDir, true, settings.Debug); err != nil {
 				return err
 			}
 		case mountTypeBindRw:
 			if settings.Debug {
 				fmt.Printf("Bind-mounting %s on %s\n", mount.Other, newDirRelative)
 			}
-			if err := mountBind(oldDir, newDir, false); err != nil {
+			if err := mountBind(oldDir, newDir, false, settings.Debug); err != nil {
 				return err
 			}
 		case mountTypeHide:
@@ -471,11 +475,11 @@ func usernsChild() error {
 			}
 
 			if newDirInfo.IsDir() {
-				if err := mountBind(hideDir, newDir, true); err != nil {
+				if err := mountBind(hideDir, newDir, true, settings.Debug); err != nil {
 					return err
 				}
 			} else {
-				if err := mountBind(hideFile, newDir, true); err != nil {
+				if err := mountBind(hideFile, newDir, true, settings.Debug); err != nil {
 					return err
 				}
 			}
@@ -520,7 +524,7 @@ func usernsChild() error {
 			if err := os.MkdirAll(filepath.Dir(newDir), 0700); err != nil {
 				return fmt.Errorf("creating directory failed: %w", err)
 			}
-			if err := mountBind(tmpFile.Name(), newDir, true); err != nil {
+			if err := mountBind(tmpFile.Name(), newDir, true, settings.Debug); err != nil {
 				return err
 			}
 			if err := os.Remove(tmpFile.Name()); err != nil {
