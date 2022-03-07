@@ -255,22 +255,18 @@ func mountBind(source string, target string, readOnly bool) error {
 		}
 
 		for _, mountEntry := range mountInfo {
-			// skip mountpoints that are shadowed since it's useless and can result in an error
-			// we detect that if the mount path outright doesn't exist or the device number is
-			// different from the mountpoint
+			// Skip mountpoints that are shadowed or we have otherwise no access to
+			// since remounting them could return an error.
+			// If we can't stat the mountpoint we shouldn't be able to traverse it so
+			// remounting isn't necessary.
 			var mountPointStat unix.Stat_t
 			err = unix.Stat(mountEntry.mountPoint, &mountPointStat)
 			if err != nil {
-				if os.IsNotExist(err) {
+				if os.IsNotExist(err) || os.IsPermission(err) {
 					continue
 				} else {
 					return err
 				}
-			}
-
-			dev := uint64(mountPointStat.Dev)
-			if unix.Major(dev) != mountEntry.major || unix.Minor(dev) != mountEntry.minor {
-				continue
 			}
 
 			if err := remountReadOnly(mountEntry.mountPoint, mountEntry.mountFlags()); err != nil {
