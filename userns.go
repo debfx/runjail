@@ -251,7 +251,7 @@ func mountBind(source string, target string, readOnly bool) error {
 	if readOnly {
 		mountInfo, err := parseMountInfo(target, "/newroot/proc/self/mountinfo")
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to parse mountinfo: %w", err)
 		}
 
 		for _, mountEntry := range mountInfo {
@@ -265,12 +265,12 @@ func mountBind(source string, target string, readOnly bool) error {
 				if os.IsNotExist(err) || os.IsPermission(err) {
 					continue
 				} else {
-					return err
+					return fmt.Errorf("failed to stat %s: %w", mountEntry.mountPoint, err)
 				}
 			}
 
 			if err := remountReadOnly(mountEntry.mountPoint, mountEntry.mountFlags()); err != nil {
-				return err
+				return fmt.Errorf("failed to remount %s read-only: %w", mountEntry.mountPoint, err)
 			}
 		}
 	}
