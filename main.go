@@ -351,6 +351,11 @@ func main() {
 	mounts = mergeMounts(mounts, configMountOptions, settings.Debug)
 	mounts = mergeMounts(mounts, flagMountOptions, settings.Debug)
 
+	err = createSystemdScope()
+	if err != nil {
+		fatalErr(fmt.Errorf("failed to create systemd scope: %w", err))
+	}
+
 	if len(settings.DbusOwn) > 0 || len(settings.DbusTalk) > 0 || len(settings.DbusCall) > 0 || len(settings.DbusBroadcast) > 0 {
 		pipe, dbusMount, cleanupFile, err := setupDbusProxy(settings)
 		if len(cleanupFile) > 0 {

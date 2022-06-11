@@ -3,6 +3,7 @@ module github.com/debfx/runjail
 go 1.13
 
 require (
+	github.com/coreos/go-systemd/v22 v22.3.2
 	github.com/cyphar/filepath-securejoin v0.2.3
 	github.com/elazarl/goproxy v0.0.0-20210110162100-a92cc753f88e
 	github.com/gobwas/glob v0.2.3
