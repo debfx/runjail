@@ -25,7 +25,7 @@ func loadFilter(defaultAction seccomp.ScmpAction, logDenials bool, rules []secco
 		return nil, fmt.Errorf("creating new filter failed: %w", err)
 	}
 
-	api_level, err := seccomp.GetApi()
+	api_level, err := seccomp.GetAPI()
 	if err != nil {
 		return nil, fmt.Errorf("getting api version failed: %w", err)
 	}
