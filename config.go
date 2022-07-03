@@ -39,6 +39,7 @@ type configStruct struct {
 	Seccomp       string            `yaml:"seccomp"`
 	Profiles      StringArray       `yaml:"profiles"`
 	FlatpakName   string            `yaml:"flatpak_name"`
+	SystemdUnit   *bool             `yaml:"systemd_unit"`
 	Command       StringArray       `yaml:"command"`
 }
 

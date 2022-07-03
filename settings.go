@@ -20,14 +20,16 @@ type settingsStruct struct {
 	Command       []string
 	OverrideArg0  string
 	Helpers       [][]string
+	SystemdUnit   bool
 }
 
 func getDefaultSettings() settingsStruct {
 	return settingsStruct{
-		Debug:   false,
-		Network: false,
-		Ipc:     false,
-		Cwd:     ".",
-		Seccomp: "yes",
+		Debug:       false,
+		Network:     false,
+		Ipc:         false,
+		Cwd:         ".",
+		Seccomp:     "yes",
+		SystemdUnit: true,
 	}
 }

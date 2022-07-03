@@ -119,6 +119,7 @@ func main() {
 	flagEnv := flag.StringSlice("env", []string{}, "Set the environment variable (format: \"name=value\").")
 	flagSeccomp := flag.String("seccomp", "yes", "Enable seccomp syscall filtering: <yes|devel|minimal|no>.")
 	flagProfile := flag.StringSlice("profile", []string{}, "Enable predefined profile: <x11|wayland|flatpak>.")
+	flagNoSystemdUnit := flag.Bool("no-systemd-unit", false, "Start comand in a transient systemd unit")
 	flagConfig := flag.String("config", "", "Fetch options from config file.")
 
 	expandedArgs := expandCmdFlags()
@@ -215,6 +216,9 @@ func main() {
 		if config.FlatpakName != "" {
 			settings.FlatpakName = config.FlatpakName
 		}
+		if config.SystemdUnit != nil {
+			settings.SystemdUnit = *config.SystemdUnit
+		}
 		if len(config.Command) != 0 {
 			settings.Command = config.Command
 		}
@@ -258,6 +262,9 @@ func main() {
 	}
 	if flag.Lookup("seccomp").Changed {
 		settings.Seccomp = *flagSeccomp
+	}
+	if flag.Lookup("no-systemd-unit").Changed {
+		settings.SystemdUnit = !*flagNoSystemdUnit
 	}
 
 	if settings.Seccomp != "yes" && settings.Seccomp != "devel" && settings.Seccomp != "minimal" && settings.Seccomp != "no" {
@@ -351,9 +358,11 @@ func main() {
 	mounts = mergeMounts(mounts, configMountOptions, settings.Debug)
 	mounts = mergeMounts(mounts, flagMountOptions, settings.Debug)
 
-	err = createSystemdScope()
-	if err != nil {
-		fatalErr(fmt.Errorf("failed to create systemd scope: %w", err))
+	if settings.SystemdUnit {
+		err = createSystemdScope()
+		if err != nil {
+			fatalErr(fmt.Errorf("failed to create systemd scope: %w", err))
+		}
 	}
 
 	if len(settings.DbusOwn) > 0 || len(settings.DbusTalk) > 0 || len(settings.DbusCall) > 0 || len(settings.DbusBroadcast) > 0 {
