@@ -213,8 +213,8 @@ func main() {
 		if len(config.Profiles) != 0 {
 			settings.Profiles = config.Profiles
 		}
-		if config.FlatpakName != "" {
-			settings.FlatpakName = config.FlatpakName
+		if config.Name != "" {
+			settings.Name = config.Name
 		}
 		if config.SystemdUnit != nil {
 			settings.SystemdUnit = *config.SystemdUnit

@@ -15,7 +15,7 @@ type settingsStruct struct {
 	DbusCall      []string
 	DbusBroadcast []string
 	Profiles      []string
-	FlatpakName   string
+	Name          string
 	SyncFds       []uintptr
 	Command       []string
 	OverrideArg0  string

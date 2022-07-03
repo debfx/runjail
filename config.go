@@ -38,7 +38,7 @@ type configStruct struct {
 	Environment   map[string]string `yaml:"environment"`
 	Seccomp       string            `yaml:"seccomp"`
 	Profiles      StringArray       `yaml:"profiles"`
-	FlatpakName   string            `yaml:"flatpak_name"`
+	Name          string            `yaml:"name"`
 	SystemdUnit   *bool             `yaml:"systemd_unit"`
 	Command       StringArray       `yaml:"command"`
 }
