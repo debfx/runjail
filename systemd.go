@@ -12,7 +12,9 @@ func createSystemdScope(name string) error {
 	ctx := context.TODO()
 	dbusConn, err := systemdDbus.NewUserConnectionContext(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to connect to systemd user bus: %w", err)
+		// silently skip if there is no user dbus session
+		// for now we only use the systemd unit for task grouping anyway
+		return nil
 	}
 	defer dbusConn.Close()
 	statusChan := make(chan string, 1)
