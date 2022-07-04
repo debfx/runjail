@@ -8,7 +8,7 @@ import (
 	systemdDbus "github.com/coreos/go-systemd/v22/dbus"
 )
 
-func createSystemdScope() error {
+func createSystemdScope(name string) error {
 	ctx := context.TODO()
 	dbusConn, err := systemdDbus.NewUserConnectionContext(ctx)
 	if err != nil {
@@ -20,7 +20,13 @@ func createSystemdScope() error {
 	properties := []systemdDbus.Property{
 		systemdDbus.PropPids(uint32(pid)),
 	}
-	_, err = dbusConn.StartTransientUnitContext(ctx, fmt.Sprintf("runjail-%d.scope", pid), "fail", properties, statusChan)
+	var scopeName string
+	if name == "" {
+		scopeName = fmt.Sprintf("runjail-%d.scope", pid)
+	} else {
+		scopeName = fmt.Sprintf("runjail-%s-%d.scope", name, pid)
+	}
+	_, err = dbusConn.StartTransientUnitContext(ctx, scopeName, "fail", properties, statusChan)
 	if err != nil {
 		return fmt.Errorf("failed to start transient unit: %w", err)
 	}

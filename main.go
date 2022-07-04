@@ -359,7 +359,7 @@ func main() {
 	mounts = mergeMounts(mounts, flagMountOptions, settings.Debug)
 
 	if settings.SystemdUnit {
-		err = createSystemdScope()
+		err = createSystemdScope(settings.Name)
 		if err != nil {
 			fatalErr(fmt.Errorf("failed to create systemd scope: %w", err))
 		}
