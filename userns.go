@@ -160,19 +160,29 @@ func mountPrivatePropagation() error {
 	return syscall.Mount("none", "/", "", syscall.MS_REC|syscall.MS_PRIVATE, "")
 }
 
-func getAllCaps() ([]uintptr, error) {
-	result := []uintptr{}
+func getCapLastCap() (uintptr, error) {
 	lastCapByteString, err := ioutil.ReadFile("/proc/sys/kernel/cap_last_cap")
 	if err != nil {
-		return result, err
+		return 0, err
 	}
+
 	lastCap, err := strconv.Atoi(strings.TrimSpace(string(lastCapByteString)))
+	if err != nil {
+		return 0, err
+	}
+
+	return uintptr(lastCap), nil
+}
+
+func getAllCaps() ([]uintptr, error) {
+	result := []uintptr{}
+	lastCap, err := getCapLastCap()
 	if err != nil {
 		return result, err
 	}
 
-	for i := 0; i <= lastCap; i++ {
-		result = append(result, uintptr(i))
+	for cap := uintptr(0); cap <= lastCap; cap++ {
+		result = append(result, cap)
 	}
 
 	return result, nil
@@ -192,6 +202,22 @@ func dropCapabilities() error {
 		},
 		&cap[0],
 	)
+}
+
+func dropCapabilityBoundingSet() error {
+	lastCap, err := getCapLastCap()
+	if err != nil {
+		return err
+	}
+
+	for cap := uintptr(0); cap <= lastCap; cap++ {
+		err = unix.Prctl(unix.PR_CAPBSET_DROP, cap, 0, 0, 0)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func mountTmpfs(path string, mode string, readOnly bool) error {
@@ -591,6 +617,10 @@ func usernsChild() error {
 		if err = netlink.LinkSetUp(ifaceLo); err != nil {
 			return err
 		}
+	}
+
+	if err := dropCapabilityBoundingSet(); err != nil {
+		return fmt.Errorf("dropping capability bounding set failed: %w", err)
 	}
 
 	if err := dropCapabilities(); err != nil {
