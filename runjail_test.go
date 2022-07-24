@@ -102,3 +102,11 @@ func TestBindRo(t *testing.T) {
 	assertNil(t, err)
 	assertEqual(t, "rotest", stdout)
 }
+
+func TestUnshare(t *testing.T) {
+	tempDir := createTempDataDir(t)
+
+	stdout, err := runTest("unshare", []string{"--cwd", tempDir, "--ro", tempDir, "--seccomp", "no"})
+	assertNil(t, err)
+	assertEqual(t, "unsharetest", stdout)
+}

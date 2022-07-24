@@ -220,6 +220,15 @@ func dropCapabilityBoundingSet() error {
 	return nil
 }
 
+func restrictUserNamespaces() error {
+	err := ioutil.WriteFile("/proc/sys/user/max_user_namespaces", []byte("0"), 0644)
+	if err != nil {
+		return fmt.Errorf("failed to set user.max_user_namespaces sysctl: %w", err)
+	}
+
+	return nil
+}
+
 func mountTmpfs(path string, mode string, readOnly bool) error {
 	flags := syscall.MS_REC | syscall.MS_NOSUID | syscall.MS_NOATIME
 	if err := syscall.Mount("tmpfs", path, "tmpfs", uintptr(flags), "mode="+mode); err != nil {
@@ -617,6 +626,12 @@ func usernsChild() error {
 		if err = netlink.LinkSetUp(ifaceLo); err != nil {
 			return err
 		}
+	}
+
+	// Do not allow creating a new user namespace. After dropping capabilties this can't changed anymore.
+	// This in necessary for seccomp=="no" but do it in any case for extra safety.
+	if err := restrictUserNamespaces(); err != nil {
+		return fmt.Errorf("unable to restrict user namespaces: %w", err)
 	}
 
 	if err := dropCapabilityBoundingSet(); err != nil {

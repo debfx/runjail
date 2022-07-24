@@ -1,0 +1,10 @@
+#!/bin/sh
+
+set -eu
+
+# test that creating a new user namespace fails
+if unshare --user -- true 2>/dev/null; then
+  exit 1
+else
+  echo "unsharetest"
+fi
