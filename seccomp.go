@@ -19,7 +19,7 @@ type seccompRule struct {
 	OpValue2 uint64
 }
 
-func loadFilter(defaultAction seccomp.ScmpAction, logDenials bool, rules []seccompRule) (*seccomp.ScmpFilter, error) {
+func loadFilter(defaultAction seccomp.ScmpAction, debug bool, rules []seccompRule) (*seccomp.ScmpFilter, error) {
 	filter, err := seccomp.NewFilter(defaultAction)
 	if err != nil {
 		return nil, fmt.Errorf("creating new filter failed: %w", err)
@@ -30,10 +30,19 @@ func loadFilter(defaultAction seccomp.ScmpAction, logDenials bool, rules []secco
 		return nil, fmt.Errorf("getting api version failed: %w", err)
 	}
 
-	if logDenials && api_level >= 3 {
+	if debug && api_level >= 3 {
 		err = filter.SetLogBit(true)
 		if err != nil {
 			return nil, fmt.Errorf("enabling logging failed: %w", err)
+		}
+	}
+
+	// enable binary tree optimization on larger filters
+	if len(rules) > 32 && api_level >= 4 {
+		err = filter.SetOptimize(2)
+		// ignore error since it's not fatal
+		if err != nil && debug {
+			fmt.Printf("seccomp binary tree optimization not available: %v\n", err)
 		}
 	}
 
@@ -58,7 +67,7 @@ func loadFilter(defaultAction seccomp.ScmpAction, logDenials bool, rules []secco
 	return filter, nil
 }
 
-func loadSeccomp(filterName string, logDenials bool) ([]*seccomp.ScmpFilter, error) {
+func loadSeccomp(filterName string, debug bool) ([]*seccomp.ScmpFilter, error) {
 	/*
 		minimal:
 			- allow by default
@@ -215,7 +224,7 @@ func loadSeccomp(filterName string, logDenials bool) ([]*seccomp.ScmpFilter, err
 		})
 	}
 
-	filterMain, err := loadFilter(defaultActionMain, logDenials, rulesMain)
+	filterMain, err := loadFilter(defaultActionMain, debug, rulesMain)
 	if err != nil {
 		return nil, fmt.Errorf("loading main seccomp filter failed: %w", err)
 	}
@@ -241,7 +250,7 @@ func loadSeccomp(filterName string, logDenials bool) ([]*seccomp.ScmpFilter, err
 		},
 	}
 
-	filterMaskedEqual, err := loadFilter(seccomp.ActAllow, logDenials, rulesMaskedEqual)
+	filterMaskedEqual, err := loadFilter(seccomp.ActAllow, debug, rulesMaskedEqual)
 	if err != nil {
 		return nil, fmt.Errorf("loading masked-equal seccomp filter failed: %w", err)
 	}
