@@ -3,8 +3,9 @@
 // license that can be found in the LICENSE.BSD file.
 // SPDX-License-Identifier: BSD-3-Clause
 
+//go:build (aix || darwin || dragonfly || freebsd || (js && wasm) || (!android && linux) || netbsd || openbsd || solaris) && (!cgo || osusergo)
 // +build aix darwin dragonfly freebsd js,wasm !android,linux netbsd openbsd solaris
-// +build !cgo
+// +build !cgo osusergo
 
 package main
 
