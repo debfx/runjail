@@ -50,12 +50,12 @@ func decodePassUsernsChild(input []byte) (passUsernsChildStruct, error) {
 }
 
 func usernsRun(exe string, settings settingsStruct, mounts []mount, environ []string, fork bool) (int, error) {
-	var unshareFlags uintptr = syscall.CLONE_NEWUSER | syscall.CLONE_NEWNS | syscall.CLONE_NEWPID
+	var unshareFlags uintptr = unix.CLONE_NEWUSER | unix.CLONE_NEWNS | unix.CLONE_NEWPID
 	if !settings.Ipc {
-		unshareFlags = unshareFlags | syscall.CLONE_NEWIPC
+		unshareFlags = unshareFlags | unix.CLONE_NEWIPC
 	}
 	if !settings.Network {
-		unshareFlags = unshareFlags | syscall.CLONE_NEWNET
+		unshareFlags = unshareFlags | unix.CLONE_NEWNET
 	}
 
 	allCaps, err := getAllCaps()
@@ -157,7 +157,7 @@ func usernsRun(exe string, settings settingsStruct, mounts []mount, environ []st
 }
 
 func mountPrivatePropagation() error {
-	return syscall.Mount("none", "/", "", syscall.MS_REC|syscall.MS_PRIVATE, "")
+	return unix.Mount("none", "/", "", unix.MS_REC|unix.MS_PRIVATE, "")
 }
 
 func getCapLastCap() (uintptr, error) {
@@ -230,8 +230,8 @@ func restrictUserNamespaces() error {
 }
 
 func mountTmpfs(path string, mode string, readOnly bool) error {
-	flags := syscall.MS_REC | syscall.MS_NOSUID | syscall.MS_NOATIME
-	if err := syscall.Mount("tmpfs", path, "tmpfs", uintptr(flags), "mode="+mode); err != nil {
+	flags := unix.MS_REC | unix.MS_NOSUID | unix.MS_NOATIME
+	if err := unix.Mount("tmpfs", path, "tmpfs", uintptr(flags), "mode="+mode); err != nil {
 		return err
 	}
 
@@ -245,15 +245,15 @@ func mountTmpfs(path string, mode string, readOnly bool) error {
 }
 
 func mountProc(path string) error {
-	return syscall.Mount("proc", path, "proc", syscall.MS_NOSUID|syscall.MS_NODEV|syscall.MS_NOEXEC, "")
+	return unix.Mount("proc", path, "proc", unix.MS_NOSUID|unix.MS_NODEV|unix.MS_NOEXEC, "")
 }
 
 func mountDevPts(path string) error {
-	return syscall.Mount("devpts", path, "devpts", syscall.MS_NOSUID|syscall.MS_NOEXEC, "newinstance,ptmxmode=0666,mode=620")
+	return unix.Mount("devpts", path, "devpts", unix.MS_NOSUID|unix.MS_NOEXEC, "newinstance,ptmxmode=0666,mode=620")
 }
 
 func remountReadOnly(path string, existingFlags int) error {
-	return syscall.Mount(path, path, "", uintptr(existingFlags|syscall.MS_REMOUNT|syscall.MS_REC|syscall.MS_BIND|syscall.MS_RDONLY), "")
+	return unix.Mount(path, path, "", uintptr(existingFlags|unix.MS_REMOUNT|unix.MS_REC|unix.MS_BIND|unix.MS_RDONLY), "")
 }
 
 func mountBind(source string, target string, readOnly bool, debug bool) error {
@@ -277,7 +277,7 @@ func mountBind(source string, target string, readOnly bool, debug bool) error {
 		}
 	}
 
-	if err := syscall.Mount(source, target, "", syscall.MS_REC|syscall.MS_BIND, ""); err != nil {
+	if err := unix.Mount(source, target, "", unix.MS_REC|unix.MS_BIND, ""); err != nil {
 		return err
 	}
 
@@ -317,17 +317,17 @@ func mountBind(source string, target string, readOnly bool, debug bool) error {
 }
 
 func reapChildren(mainPid int, helperPids []int, syncFile *os.File) error {
-	var wstatus syscall.WaitStatus
+	var wstatus unix.WaitStatus
 	mainExited := false
 
 	for {
 		// reap any terminated child
-		diedPid, err := syscall.Wait4(-1, &wstatus, 0, nil)
-		for err == syscall.EINTR {
-			diedPid, err = syscall.Wait4(-1, &wstatus, 0, nil)
+		diedPid, err := unix.Wait4(-1, &wstatus, 0, nil)
+		for err == unix.EINTR {
+			diedPid, err = unix.Wait4(-1, &wstatus, 0, nil)
 		}
 
-		if err == syscall.ECHILD {
+		if err == unix.ECHILD {
 			// no more children to wait upon
 			return nil
 		}
@@ -375,8 +375,8 @@ func reapChildren(mainPid int, helperPids []int, syncFile *os.File) error {
 			if allNonHelperExited {
 				// only helper processes left, terminate them
 				for _, pid := range helperPids {
-					err = syscall.Kill(pid, syscall.SIGKILL)
-					if err != nil && err != syscall.ESRCH {
+					err = unix.Kill(pid, unix.SIGKILL)
+					if err != nil && err != unix.ESRCH {
 						return fmt.Errorf("failed to kill helper process: %w", err)
 					}
 				}
@@ -427,14 +427,14 @@ func usernsChild() error {
 		return fmt.Errorf("failed to make newroot directory: %w", err)
 	}
 	// bind mount on itself so it still exists when tmpDir is unmounted
-	if err := syscall.Mount("newroot", "newroot", "", syscall.MS_REC|syscall.MS_BIND, ""); err != nil {
+	if err := unix.Mount("newroot", "newroot", "", unix.MS_REC|unix.MS_BIND, ""); err != nil {
 		return fmt.Errorf("failed to bind-mount newroot: %w", err)
 	}
 
 	if err := os.Mkdir("oldroot", 0755); err != nil {
 		return fmt.Errorf("failed to make oldroot directory: %w", err)
 	}
-	if err := syscall.PivotRoot(tmpDir, "oldroot"); err != nil {
+	if err := unix.PivotRoot(tmpDir, "oldroot"); err != nil {
 		return fmt.Errorf("pivot_root to temporary dir failed: %w", err)
 	}
 	if err := os.Chdir("/"); err != nil {
@@ -584,36 +584,36 @@ func usernsChild() error {
 	}
 
 	// make sure the mount is private so we don't proprage the umount() to the outside
-	if err := syscall.Mount("oldroot", "oldroot", "", syscall.MS_REC|syscall.MS_PRIVATE, ""); err != nil {
+	if err := unix.Mount("oldroot", "oldroot", "", unix.MS_REC|unix.MS_PRIVATE, ""); err != nil {
 		return fmt.Errorf("failed to make oldroot mount private: %w", err)
 	}
-	if err := syscall.Unmount("oldroot", syscall.MNT_DETACH); err != nil {
+	if err := unix.Unmount("oldroot", unix.MNT_DETACH); err != nil {
 		return fmt.Errorf("failed to unmount oldroot: %w", err)
 	}
 
 	// open our temporary root dir so we can unmount it once newroot is "/"
-	tmpRootFd, err := syscall.Open("/", syscall.O_DIRECTORY, syscall.O_RDONLY)
+	tmpRootFd, err := unix.Open("/", unix.O_DIRECTORY, unix.O_RDONLY)
 	if err != nil {
 		return fmt.Errorf("failed to open temorary root directory: %w", err)
 	}
 	if err := os.Chdir("newroot"); err != nil {
 		return fmt.Errorf("failed to chdir into newroot: %w", err)
 	}
-	if err := syscall.PivotRoot(".", "."); err != nil {
+	if err := unix.PivotRoot(".", "."); err != nil {
 		return fmt.Errorf("pivot_root into newroot failed: %w", err)
 	}
 
-	if err := syscall.Fchdir(tmpRootFd); err != nil {
+	if err := unix.Fchdir(tmpRootFd); err != nil {
 		return fmt.Errorf("failed to chdir into temporary root fd: %w", err)
 	}
-	if err := syscall.Unmount(".", syscall.MNT_DETACH); err != nil {
+	if err := unix.Unmount(".", unix.MNT_DETACH); err != nil {
 		return fmt.Errorf("failed to unmount temporary root tmpfs: %w", err)
 	}
 
 	if err := os.Chdir("/"); err != nil {
 		return fmt.Errorf("chdir / in new root failed: %w", err)
 	}
-	if err := syscall.Close(tmpRootFd); err != nil {
+	if err := unix.Close(tmpRootFd); err != nil {
 		return fmt.Errorf("failed to close temporary root fd: %w", err)
 	}
 
@@ -666,7 +666,7 @@ func usernsChild() error {
 			}
 		}
 	} else {
-		if _, err := syscall.Setsid(); err != nil {
+		if _, err := unix.Setsid(); err != nil {
 			return err
 		}
 	}

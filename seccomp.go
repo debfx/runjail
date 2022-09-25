@@ -5,9 +5,9 @@ package main
 
 import (
 	"fmt"
-	"syscall"
 
 	seccomp "github.com/seccomp/libseccomp-golang"
+	"golang.org/x/sys/unix"
 )
 
 type seccompRule struct {
@@ -74,9 +74,9 @@ func loadSeccomp(filterName string, logDenials bool) ([]*seccomp.ScmpFilter, err
 
 	filters := []*seccomp.ScmpFilter{}
 
-	actionEperm := seccomp.ActErrno.SetReturnCode(int16(syscall.EPERM))
-	actionEnosys := seccomp.ActErrno.SetReturnCode(int16(syscall.ENOSYS))
-	actionEafnosupport := seccomp.ActErrno.SetReturnCode(int16(syscall.EAFNOSUPPORT))
+	actionEperm := seccomp.ActErrno.SetReturnCode(int16(unix.EPERM))
+	actionEnosys := seccomp.ActErrno.SetReturnCode(int16(unix.ENOSYS))
+	actionEafnosupport := seccomp.ActErrno.SetReturnCode(int16(unix.EAFNOSUPPORT))
 
 	var defaultActionMain seccomp.ScmpAction
 	rulesMain := []seccompRule{}
@@ -157,7 +157,7 @@ func loadSeccomp(filterName string, logDenials bool) ([]*seccomp.ScmpFilter, err
 		for _, i := range []int{1, 2, 10, 16} {
 			rulesMain = append(rulesMain, seccompRule{
 				Action:   seccomp.ActAllow,
-				Syscall:  syscall.SYS_SOCKET,
+				Syscall:  unix.SYS_SOCKET,
 				Arg:      0,
 				Op:       seccomp.CompareEqual,
 				OpValue1: uint64(i),
@@ -166,14 +166,14 @@ func loadSeccomp(filterName string, logDenials bool) ([]*seccomp.ScmpFilter, err
 
 		rulesMain = append(rulesMain, seccompRule{
 			Action:   actionEafnosupport,
-			Syscall:  syscall.SYS_SOCKET,
+			Syscall:  unix.SYS_SOCKET,
 			Arg:      0,
 			Op:       seccomp.CompareLess,
 			OpValue1: 1,
 		})
 		rulesMain = append(rulesMain, seccompRule{
 			Action:   actionEafnosupport,
-			Syscall:  syscall.SYS_SOCKET,
+			Syscall:  unix.SYS_SOCKET,
 			Arg:      0,
 			Op:       seccomp.CompareGreater,
 			OpValue1: 16,
@@ -182,7 +182,7 @@ func loadSeccomp(filterName string, logDenials bool) ([]*seccomp.ScmpFilter, err
 		for i := 3; i < 10; i++ {
 			rulesMain = append(rulesMain, seccompRule{
 				Action:   actionEafnosupport,
-				Syscall:  syscall.SYS_SOCKET,
+				Syscall:  unix.SYS_SOCKET,
 				Arg:      0,
 				Op:       seccomp.CompareEqual,
 				OpValue1: uint64(i),
@@ -191,7 +191,7 @@ func loadSeccomp(filterName string, logDenials bool) ([]*seccomp.ScmpFilter, err
 		for i := 11; i < 16; i++ {
 			rulesMain = append(rulesMain, seccompRule{
 				Action:   actionEafnosupport,
-				Syscall:  syscall.SYS_SOCKET,
+				Syscall:  unix.SYS_SOCKET,
 				Arg:      0,
 				Op:       seccomp.CompareEqual,
 				OpValue1: uint64(i),
@@ -201,14 +201,14 @@ func loadSeccomp(filterName string, logDenials bool) ([]*seccomp.ScmpFilter, err
 		// only allow personality(PER_LINUX)
 		rulesMain = append(rulesMain, seccompRule{
 			Action:   seccomp.ActAllow,
-			Syscall:  syscall.SYS_PERSONALITY,
+			Syscall:  unix.SYS_PERSONALITY,
 			Arg:      0,
 			Op:       seccomp.CompareEqual,
 			OpValue1: 0,
 		})
 		rulesMain = append(rulesMain, seccompRule{
 			Action:   actionEperm,
-			Syscall:  syscall.SYS_PERSONALITY,
+			Syscall:  unix.SYS_PERSONALITY,
 			Arg:      0,
 			Op:       seccomp.CompareNotEqual,
 			OpValue1: 0,
@@ -225,19 +225,19 @@ func loadSeccomp(filterName string, logDenials bool) ([]*seccomp.ScmpFilter, err
 	rulesMaskedEqual := []seccompRule{
 		{
 			Action:   actionEperm,
-			Syscall:  syscall.SYS_IOCTL,
+			Syscall:  unix.SYS_IOCTL,
 			Arg:      1,
 			Op:       seccomp.CompareMaskedEqual,
 			OpValue1: 0xFFFFFFFF,
-			OpValue2: syscall.TIOCSTI,
+			OpValue2: unix.TIOCSTI,
 		},
 		{
 			Action:   actionEperm,
-			Syscall:  syscall.SYS_CLONE,
+			Syscall:  unix.SYS_CLONE,
 			Arg:      0,
 			Op:       seccomp.CompareMaskedEqual,
-			OpValue1: syscall.CLONE_NEWUSER,
-			OpValue2: syscall.CLONE_NEWUSER,
+			OpValue1: unix.CLONE_NEWUSER,
+			OpValue2: unix.CLONE_NEWUSER,
 		},
 	}
 

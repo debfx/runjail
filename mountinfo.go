@@ -10,25 +10,26 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"syscall"
+
+	"golang.org/x/sys/unix"
 )
 
 var regexpOctalEscape = regexp.MustCompile(`\\(\d{1,3})`)
 
 var optionFlagMap map[string]int = map[string]int{
-	"ro":          syscall.MS_RDONLY,
-	"noexec":      syscall.MS_NOEXEC,
-	"nosuid":      syscall.MS_NOSUID,
-	"nodev":       syscall.MS_NODEV,
-	"sync":        syscall.MS_SYNCHRONOUS,
-	"dirsync":     syscall.MS_DIRSYNC,
-	"silent":      syscall.MS_SILENT,
-	"mand":        syscall.MS_MANDLOCK,
-	"noatime":     syscall.MS_NOATIME,
-	"iversion":    syscall.MS_I_VERSION,
-	"nodiratime":  syscall.MS_NODIRATIME,
-	"relatime":    syscall.MS_RELATIME,
-	"strictatime": syscall.MS_STRICTATIME,
+	"ro":          unix.MS_RDONLY,
+	"noexec":      unix.MS_NOEXEC,
+	"nosuid":      unix.MS_NOSUID,
+	"nodev":       unix.MS_NODEV,
+	"sync":        unix.MS_SYNCHRONOUS,
+	"dirsync":     unix.MS_DIRSYNC,
+	"silent":      unix.MS_SILENT,
+	"mand":        unix.MS_MANDLOCK,
+	"noatime":     unix.MS_NOATIME,
+	"iversion":    unix.MS_I_VERSION,
+	"nodiratime":  unix.MS_NODIRATIME,
+	"relatime":    unix.MS_RELATIME,
+	"strictatime": unix.MS_STRICTATIME,
 }
 
 type mountInfoEntry struct {

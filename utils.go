@@ -9,7 +9,6 @@ import (
 	"os/user"
 	"strconv"
 	"strings"
-	"syscall"
 
 	"golang.org/x/sys/unix"
 )
@@ -142,12 +141,12 @@ func yesNoStrToBool(str string) (bool, error) {
 }
 
 func setCloseOnExec(fd uintptr) error {
-	flags, err := unix.FcntlInt(fd, syscall.F_GETFD, 0)
+	flags, err := unix.FcntlInt(fd, unix.F_GETFD, 0)
 	if err != nil {
 		return err
 	}
 
-	_, err = unix.FcntlInt(fd, syscall.F_SETFD, flags|syscall.FD_CLOEXEC)
+	_, err = unix.FcntlInt(fd, unix.F_SETFD, flags|unix.FD_CLOEXEC)
 	if err != nil {
 		return err
 	}
@@ -156,12 +155,12 @@ func setCloseOnExec(fd uintptr) error {
 }
 
 func clearCloseOnExec(fd uintptr) error {
-	flags, err := unix.FcntlInt(fd, syscall.F_GETFD, 0)
+	flags, err := unix.FcntlInt(fd, unix.F_GETFD, 0)
 	if err != nil {
 		return err
 	}
 
-	_, err = unix.FcntlInt(fd, syscall.F_SETFD, flags & ^syscall.FD_CLOEXEC)
+	_, err = unix.FcntlInt(fd, unix.F_SETFD, flags & ^unix.FD_CLOEXEC)
 	if err != nil {
 		return err
 	}
@@ -170,7 +169,7 @@ func clearCloseOnExec(fd uintptr) error {
 }
 
 func setFdReadOnly(fd uintptr) error {
-	_, err := unix.FcntlInt(fd, syscall.F_SETFL, syscall.O_RDONLY)
+	_, err := unix.FcntlInt(fd, unix.F_SETFL, unix.O_RDONLY)
 	if err != nil {
 		return err
 	}
