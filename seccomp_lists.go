@@ -389,7 +389,8 @@ var SeccompEperm = []string{
 	"chroot",
 	"clock_settime",
 	"clock_settime64",
-	"clone3",
+	// return the default action ENOSYS instead
+	//"clone3",
 	"create_module",
 	"delete_module",
 	"fanotify_init",
