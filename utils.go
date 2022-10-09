@@ -14,17 +14,7 @@ import (
 )
 
 const (
-	MFD_CLOEXEC       = 0x0001
-	MFD_ALLOW_SEALING = 0x0002
 	SENDFILE_MAX_SIZE = 0x7FFFF000
-
-	F_LINUX_SPECIFIC_BASE = 1024
-	F_ADD_SEALS           = F_LINUX_SPECIFIC_BASE + 9
-
-	F_SEAL_SEAL   = 0x0001
-	F_SEAL_SHRINK = 0x0002
-	F_SEAL_GROW   = 0x0004
-	F_SEAL_WRITE  = 0x0008
 )
 
 func getUsername() (string, error) {
@@ -263,7 +253,7 @@ func terminalName(fd uintptr) (string, error) {
 }
 
 func clonePathAsMemfd(path string, memfdName string) (int, error) {
-	memFd, err := unix.MemfdCreate(memfdName, MFD_CLOEXEC|MFD_ALLOW_SEALING)
+	memFd, err := unix.MemfdCreate(memfdName, unix.MFD_CLOEXEC|unix.MFD_ALLOW_SEALING)
 	if err != nil {
 		return 0, err
 	}
@@ -280,7 +270,7 @@ func clonePathAsMemfd(path string, memfdName string) (int, error) {
 		return 0, err
 	}
 
-	_, err = unix.FcntlInt(uintptr(memFd), F_ADD_SEALS, F_SEAL_SEAL|F_SEAL_SHRINK|F_SEAL_GROW|F_SEAL_WRITE)
+	_, err = unix.FcntlInt(uintptr(memFd), unix.F_ADD_SEALS, unix.F_SEAL_SEAL|unix.F_SEAL_SHRINK|unix.F_SEAL_GROW|unix.F_SEAL_WRITE)
 	if err != nil {
 		return 0, err
 	}
