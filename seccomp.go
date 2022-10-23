@@ -71,7 +71,7 @@ func loadSeccomp(filterName string, debug bool) ([]*seccomp.ScmpFilter, error) {
 	/*
 		minimal:
 			- allow by default
-			- deny mount syscalls, chroot/privot_root, new user namespace, ioctl(TIOCSTI)
+			- deny mount syscalls, chroot/pivot_root, new user namespace, ioctl(TIOCSTI)
 		default:
 			- ENOSYS by default
 			- allow list of syscalls
