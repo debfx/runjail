@@ -230,7 +230,7 @@ func restrictUserNamespaces() error {
 }
 
 func mountTmpfs(path string, mode string, readOnly bool) error {
-	flags := unix.MS_REC | unix.MS_NOSUID | unix.MS_NOATIME
+	flags := unix.MS_REC | unix.MS_NOSUID | unix.MS_NODEV | unix.MS_NOATIME
 	if err := unix.Mount("tmpfs", path, "tmpfs", uintptr(flags), "mode="+mode); err != nil {
 		return err
 	}
