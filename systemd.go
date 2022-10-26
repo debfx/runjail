@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
 
 	systemdDbus "github.com/coreos/go-systemd/v22/dbus"
 )
@@ -31,6 +32,19 @@ func createSystemdScope(name string) error {
 	_, err = dbusConn.StartTransientUnitContext(ctx, scopeName, "fail", properties, statusChan)
 	if err != nil {
 		return fmt.Errorf("failed to start transient unit: %w", err)
+	}
+
+	timeout := time.NewTimer(5 * time.Second)
+	defer timeout.Stop()
+
+	select {
+	case status := <-statusChan:
+		close(statusChan)
+		if status != "done" {
+			return fmt.Errorf("failed to start transient unit: %w", err)
+		}
+	case <-timeout.C:
+		return fmt.Errorf("timeout waiting for systemd to create a transient unit")
 	}
 
 	return nil
