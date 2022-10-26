@@ -318,13 +318,17 @@ func mountBind(source string, target string, readOnly bool, debug bool) error {
 
 func reapChildren(mainPid int, helperPids []int, syncFile *os.File) error {
 	var wstatus unix.WaitStatus
+	var err error
+	var diedPid int
 	mainExited := false
 
 	for {
 		// reap any terminated child
-		diedPid, err := unix.Wait4(-1, &wstatus, 0, nil)
-		for err == unix.EINTR {
+		for {
 			diedPid, err = unix.Wait4(-1, &wstatus, 0, nil)
+			if err != unix.EINTR {
+				break
+			}
 		}
 
 		if err == unix.ECHILD {
@@ -359,12 +363,12 @@ func reapChildren(mainPid int, helperPids []int, syncFile *os.File) error {
 		}
 
 		if mainExited && len(helperPids) != 0 {
-			allNonHelperExited := true
 			runningPids, err := getAllRunningPids()
 			if err != nil {
 				return fmt.Errorf("failed to read all processes: %w", err)
 			}
 
+			allNonHelperExited := true
 			for _, pid := range runningPids {
 				if pid != 1 && !isIntInSlice(pid, helperPids) {
 					allNonHelperExited = false
