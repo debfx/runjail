@@ -683,9 +683,15 @@ func usernsChild() error {
 			return fmt.Errorf("helper executable does not exist: %w", err)
 		}
 
+		args := make([]string, len(helper))
+		copy(args, helper)
+		if args[0] == "/proc/self/exe" {
+			args[0] = os.Args[0]
+		}
+
 		cmd := exec.Cmd{
 			Path:   executable,
-			Args:   helper,
+			Args:   args,
 			Stdin:  os.Stdin,
 			Stdout: os.Stdout,
 			Stderr: os.Stderr,
