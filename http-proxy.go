@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
@@ -84,7 +83,7 @@ func setupHttpProxy(originalSettings settingsStruct) (proxyPipe uintptr, proxyMo
 	if err = os.MkdirAll(proxySocketDir, 0750); err != nil {
 		return
 	}
-	proxySocketFile, err := ioutil.TempFile(proxySocketDir, "http-filter-proxy-")
+	proxySocketFile, err := os.CreateTemp(proxySocketDir, "http-filter-proxy-")
 	if err != nil {
 		return
 	}
@@ -155,7 +154,7 @@ func setupHttpProxy(originalSettings settingsStruct) (proxyPipe uintptr, proxyMo
 func runHttpProxy() error {
 	dataFd, _ := strconv.Atoi(os.Args[2])
 	dataFile := os.NewFile(uintptr(dataFd), "")
-	paramsBytes, _ := ioutil.ReadAll(dataFile)
+	paramsBytes, _ := io.ReadAll(dataFile)
 	if err := dataFile.Close(); err != nil {
 		return fmt.Errorf("failed to close the parameters file: %w", err)
 	}

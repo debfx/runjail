@@ -6,7 +6,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/user"
 	"path"
@@ -84,14 +83,14 @@ func getDefaultOptions() (rawMountOptions, error) {
 		"/sys/firmware",
 	}
 
-	files, err := ioutil.ReadDir("/")
+	files, err := os.ReadDir("/")
 	if err != nil {
 		return rawMountOptions{}, err
 	}
 	for _, file := range files {
 		absolutePath := path.Join("/", file.Name())
 		if isStringInSlice(file.Name(), []string{"bin", "sbin"}) || strings.HasPrefix(file.Name(), "lib") {
-			if file.Mode()&os.ModeSymlink != 0 {
+			if file.Type()&os.ModeSymlink != 0 {
 				symlinkTarget, err := filepath.EvalSymlinks(absolutePath)
 				if err != nil {
 					return rawMountOptions{}, err

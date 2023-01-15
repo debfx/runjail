@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -53,7 +52,7 @@ func assertEqual(t *testing.T, expected string, actual string) {
 }
 
 func createTempDataDir(t *testing.T) string {
-	tempDir, err := ioutil.TempDir("", t.Name())
+	tempDir, err := os.MkdirTemp("", t.Name())
 	if err != nil {
 		t.Errorf("TempDir create failed: %v", err)
 	}

@@ -5,7 +5,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -23,7 +22,7 @@ func setupDbusProxy(originalSettings settingsStruct) (proxyPipe uintptr, dbusMou
 	if err = os.MkdirAll(proxySocketDir, 0750); err != nil {
 		return
 	}
-	proxySocketFile, err := ioutil.TempFile(proxySocketDir, "session-bus-proxy-")
+	proxySocketFile, err := os.CreateTemp(proxySocketDir, "session-bus-proxy-")
 	if err != nil {
 		return
 	}

@@ -9,7 +9,7 @@ import (
 	"encoding/gob"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"os/exec"
 	"path"
@@ -161,7 +161,7 @@ func mountPrivatePropagation() error {
 }
 
 func getCapLastCap() (uintptr, error) {
-	lastCapByteString, err := ioutil.ReadFile("/proc/sys/kernel/cap_last_cap")
+	lastCapByteString, err := os.ReadFile("/proc/sys/kernel/cap_last_cap")
 	if err != nil {
 		return 0, err
 	}
@@ -221,7 +221,7 @@ func dropCapabilityBoundingSet() error {
 }
 
 func restrictUserNamespaces() error {
-	err := ioutil.WriteFile("/proc/sys/user/max_user_namespaces", []byte("0"), 0644)
+	err := os.WriteFile("/proc/sys/user/max_user_namespaces", []byte("0"), 0644)
 	if err != nil {
 		return fmt.Errorf("failed to set user.max_user_namespaces sysctl: %w", err)
 	}
@@ -271,7 +271,7 @@ func mountBind(source string, target string, readOnly bool, debug bool) error {
 			return err
 		}
 		if _, err := os.Stat(target); os.IsNotExist(err) {
-			if err := ioutil.WriteFile(target, []byte{}, 0600); err != nil {
+			if err := os.WriteFile(target, []byte{}, 0600); err != nil {
 				return err
 			}
 		}
@@ -391,7 +391,7 @@ func reapChildren(mainPid int, helperPids []int, syncFile *os.File) error {
 func usernsChild() error {
 	dataFd, _ := strconv.Atoi(os.Args[2])
 	dataFile := os.NewFile(uintptr(dataFd), "")
-	paramsBytes, _ := ioutil.ReadAll(dataFile)
+	paramsBytes, _ := io.ReadAll(dataFile)
 	if err := dataFile.Close(); err != nil {
 		return fmt.Errorf("failed to close the parameters file: %w", err)
 	}
@@ -547,7 +547,7 @@ func usernsChild() error {
 				fmt.Printf("Creating %s from data file\n", newDirRelative)
 			}
 
-			tmpFile, err := ioutil.TempFile("/", "bindfile")
+			tmpFile, err := os.CreateTemp("/", "bindfile")
 			if err != nil {
 				return err
 			}

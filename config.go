@@ -5,7 +5,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strconv"
 	"strings"
@@ -74,7 +73,7 @@ func replaceAllMap(stringMap map[string]string, replacer *strings.Replacer) {
 }
 
 func parseConfig(path string) (configStruct, error) {
-	configContent, err := ioutil.ReadFile(path)
+	configContent, err := os.ReadFile(path)
 	if err != nil {
 		return configStruct{}, fmt.Errorf("failed to read config file: %w", err)
 	}
