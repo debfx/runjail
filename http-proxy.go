@@ -226,7 +226,13 @@ func runHttpProxy() error {
 
 	go func() {
 		fds := []unix.PollFd{{Fd: int32(syncFd), Events: 0}}
-		_, err := unix.Poll(fds, -1)
+		var err error
+		for {
+			_, err = unix.Poll(fds, -1)
+			if err != unix.EINTR {
+				break
+			}
+		}
 		if err != nil {
 			fmt.Printf("error polling the sync pipe: %v\n", err)
 		}

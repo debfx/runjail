@@ -294,8 +294,7 @@ func mountBind(source string, target string, readOnly bool, debug bool) error {
 			// since remounting them could return an error.
 			// If we can't stat the mountpoint we shouldn't be able to traverse it so
 			// remounting isn't necessary.
-			var mountPointStat unix.Stat_t
-			err = unix.Stat(mountEntry.mountPoint, &mountPointStat)
+			_, err = os.Stat(mountEntry.mountPoint)
 			if err != nil {
 				if os.IsNotExist(err) || os.IsPermission(err) {
 					if debug {
