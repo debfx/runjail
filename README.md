@@ -94,7 +94,7 @@ to be set to `1`.
 
 # Building
 
-Golang >= 1.13 and the development files for libseccomp are required.
+Golang >= 1.17 and the development files for libseccomp are required.
 
 runjail can be built by running `go build` inside a Git checkout or with
 `go get -u github.com/debfx/runjail`

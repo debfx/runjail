@@ -1,6 +1,6 @@
 module github.com/debfx/runjail
 
-go 1.13
+go 1.17
 
 require (
 	github.com/coreos/go-systemd/v22 v22.5.0
@@ -12,7 +12,8 @@ require (
 	github.com/seccomp/libseccomp-golang v0.10.0
 	github.com/spf13/pflag v1.0.5
 	github.com/vishvananda/netlink v1.1.0
-	github.com/vishvananda/netns v0.0.2 // indirect
 	golang.org/x/sys v0.4.0
 	gopkg.in/yaml.v2 v2.4.0
 )
+
+require github.com/vishvananda/netns v0.0.2 // indirect
