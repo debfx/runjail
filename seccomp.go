@@ -230,8 +230,8 @@ func loadSeccomp(filterName string, debug bool) ([]*seccomp.ScmpFilter, error) {
 	}
 	filters = append(filters, filterMain)
 
-	// don't allow faking input to the controlling tty (CVE-2017-5226) / block TIOCSTI
 	rulesMaskedEqual := []seccompRule{
+		// don't allow faking input to the controlling tty (CVE-2017-5226)
 		{
 			Action:   actionEperm,
 			Syscall:  unix.SYS_IOCTL,
@@ -240,6 +240,16 @@ func loadSeccomp(filterName string, debug bool) ([]*seccomp.ScmpFilter, error) {
 			OpValue1: 0xFFFFFFFF,
 			OpValue2: unix.TIOCSTI,
 		},
+		// block copy/paste operations on virtual consoles (CVE-2023-28100)
+		{
+			Action:   actionEperm,
+			Syscall:  unix.SYS_IOCTL,
+			Arg:      1,
+			Op:       seccomp.CompareMaskedEqual,
+			OpValue1: 0xFFFFFFFF,
+			OpValue2: unix.TIOCLINUX,
+		},
+		// block creating a new user namespace
 		{
 			Action:   actionEperm,
 			Syscall:  unix.SYS_CLONE,
