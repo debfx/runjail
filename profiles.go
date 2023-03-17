@@ -142,6 +142,8 @@ func getProfile(name string, settings settingsStruct) (jailProfile, error) {
 
 		profile.Settings.DbusCall = append(profile.Settings.DbusCall, "org.freedesktop.portal.*=*")
 		profile.Settings.DbusBroadcast = append(profile.Settings.DbusBroadcast, "org.freedesktop.portal.*=@/org/freedesktop/portal/*")
+	default:
+		return profile, fmt.Errorf("profile \"%s\" doesn't exist", name)
 	}
 
 	return profile, nil
