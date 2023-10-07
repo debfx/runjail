@@ -57,7 +57,7 @@ func getDefaultOptions() (rawMountOptions, error) {
 
 	defaults := rawMountOptions{}
 
-	defaults.Ro = []string{}
+	defaults.RoTry = []string{"/etc/resolv.conf"}
 	defaults.Rw = []string{"/dev/null", "/dev/zero", "/dev/full", "/dev/random", "/dev/urandom", "/dev/tty"}
 	defaults.BindRw = make(map[string]string)
 	defaults.Empty = []string{"/tmp", "/var/tmp", "/dev/shm", "/run/lock", userHomeDir, userRuntimeDir}
