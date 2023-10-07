@@ -57,10 +57,32 @@ func getDefaultOptions() (rawMountOptions, error) {
 
 	defaults := rawMountOptions{}
 
-	defaults.RoTry = []string{"/etc/resolv.conf"}
-	defaults.Rw = []string{"/dev/null", "/dev/zero", "/dev/full", "/dev/random", "/dev/urandom", "/dev/tty"}
+	defaults.RoTry = []string{
+		"/etc",
+		// resolv.conf is often a symlink so mounting /etc is not enough
+		"/etc/resolv.conf",
+		"/selinux",
+		// ideally we'd mount a new sysfs but the kernel only allows this if we are admin of the network namespace
+		"/sys",
+		"/usr",
+	}
+	defaults.Rw = []string{
+		"/dev/null",
+		"/dev/zero",
+		"/dev/full",
+		"/dev/random",
+		"/dev/urandom",
+		"/dev/tty",
+	}
 	defaults.BindRw = make(map[string]string)
-	defaults.Empty = []string{"/tmp", "/var/tmp", "/dev/shm", "/run/lock", userHomeDir, userRuntimeDir}
+	defaults.Empty = []string{
+		"/tmp",
+		"/var/tmp",
+		"/dev/shm",
+		"/run/lock",
+		userHomeDir,
+		userRuntimeDir,
+	}
 	defaults.Symlink = make(map[string]string)
 	defaults.Symlink["/dev/fd"] = "/proc/self/fd"
 	defaults.Symlink["/dev/stdin"] = "/proc/self/fd/0"
@@ -99,9 +121,6 @@ func getDefaultOptions() (rawMountOptions, error) {
 			} else {
 				defaults.Ro = append(defaults.Ro, absolutePath)
 			}
-		} else if isStringInSlice(file.Name(), []string{"etc", "selinux", "sys", "usr"}) {
-			// ideally we'd mount a new sysfs but the kernel only allows this if we are admin of the network namespace
-			defaults.Ro = append(defaults.Ro, absolutePath)
 		}
 	}
 
