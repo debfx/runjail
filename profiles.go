@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only OR GPL-3.0-only
-// Copyright (C) 2020-2022 Felix Geyer <debfx@fobos.de>
+// Copyright (C) Felix Geyer <debfx@fobos.de>
 
 package main
 
