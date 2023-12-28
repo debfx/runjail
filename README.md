@@ -98,3 +98,10 @@ Golang >= 1.17 and the development files for libseccomp are required.
 
 runjail can be built by running `go build` inside a Git checkout or with
 `go get -u github.com/debfx/runjail`
+
+
+# License
+
+Unless otherwise noted all code of runjail is licensed under the GNU General
+Public License version 3 or (at your option) version 2.
+The full text of the GPLv3 can be found in the LICENSE file.
