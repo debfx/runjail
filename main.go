@@ -401,8 +401,8 @@ func main() {
 		settings.SyncFds = append(settings.SyncFds, pipe)
 		settings.Helpers = append(settings.Helpers, []string{"/proc/self/exe", "http-proxy-forwarder"})
 		mounts = mergeMounts(mounts, []mount{proxyMount}, settings.Debug)
-		envVars["http_proxy"] = "http://localhost:18080/"
-		envVars["https_proxy"] = "http://localhost:18080/"
+		envVars["http_proxy"] = "http://127.0.0.1:18080/"
+		envVars["https_proxy"] = "http://127.0.0.1:18080/"
 	}
 
 	envVarsFlat := []string{}
