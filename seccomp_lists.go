@@ -135,9 +135,6 @@ var SeccompAllow = []string{
 	"ioprio_set",
 	"io_setup",
 	"io_submit",
-	"io_uring_enter",
-	"io_uring_register",
-	"io_uring_setup",
 	"ipc",
 	"kill",
 	"landlock_add_rule",
@@ -377,6 +374,13 @@ var SeccompAllowDevel = []string{
 	"ptrace",
 }
 
+/*
+blocked but not part of this list so ENOSYS is returned instead:
+"clone3",
+"io_uring_enter",
+"io_uring_register",
+"io_uring_setup",
+*/
 var SeccompEperm = []string{
 	"_sysctl",
 	"acct",
@@ -389,8 +393,6 @@ var SeccompEperm = []string{
 	"chroot",
 	"clock_settime",
 	"clock_settime64",
-	// return the default action ENOSYS instead
-	//"clone3",
 	"create_module",
 	"delete_module",
 	"fanotify_init",
