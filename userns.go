@@ -256,6 +256,80 @@ func remountReadOnly(path string, existingFlags int) error {
 	return unix.Mount(path, path, "", uintptr(existingFlags|unix.MS_REMOUNT|unix.MS_REC|unix.MS_BIND|unix.MS_RDONLY), "")
 }
 
+func remountReadOnlyRecursive(path string, mountInfoPath string, debug bool) error {
+	mountInfo, err := parseMountInfo(path, mountInfoPath)
+	if err != nil {
+		return fmt.Errorf("failed to parse mountinfo: %w", err)
+	}
+
+	for _, mountEntry := range mountInfo {
+		// Skip mountpoints that are shadowed or we have otherwise no access to
+		// since remounting them could return an error.
+		// If we can't stat the mountpoint we shouldn't be able to traverse it so
+		// remounting isn't necessary.
+		_, err = os.Stat(mountEntry.mountPoint)
+		if err != nil {
+			if os.IsNotExist(err) || os.IsPermission(err) {
+				if debug {
+					// strip /newroot/ from mountEntry.mountPoint
+					fmt.Printf("Skipped remounting as read-only: %s\n", mountEntry.mountPoint[8:])
+				}
+				continue
+			} else {
+				return fmt.Errorf("failed to stat %s: %w", mountEntry.mountPoint, err)
+			}
+		}
+
+		if err := remountReadOnly(mountEntry.mountPoint, mountEntry.mountFlags()); err != nil {
+			return fmt.Errorf("failed to remount %s read-only: %w", mountEntry.mountPoint, err)
+		}
+	}
+
+	return nil
+}
+
+func mountBindOld(source string, target string, readOnly bool, debug bool) error {
+	if err := unix.Mount(source, target, "", unix.MS_REC|unix.MS_BIND, ""); err != nil {
+		return err
+	}
+
+	// recursively remount everything beneath the given path
+	// doing that on `target` with MS_REC is not enough
+	if readOnly {
+		if err := remountReadOnlyRecursive(target, "/newroot/proc/self/mountinfo", debug); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func mountBindNew(source string, target string, readOnly bool) error {
+	// the new mount API has the advantage that read-only bind mounting is recursive
+
+	fdTree, err := unix.OpenTree(-1, source, unix.OPEN_TREE_CLONE|unix.OPEN_TREE_CLOEXEC|unix.AT_EMPTY_PATH|unix.AT_RECURSIVE)
+	if err != nil {
+		return err
+	}
+	defer unix.Close(fdTree)
+
+	mountAttr := unix.MountAttr{}
+	if readOnly {
+		mountAttr.Attr_set |= unix.MOUNT_ATTR_RDONLY
+	}
+	err = unix.MountSetattr(fdTree, "", unix.AT_EMPTY_PATH|unix.AT_RECURSIVE, &mountAttr)
+	if err != nil {
+		return err
+	}
+
+	err = unix.MoveMount(fdTree, "", -1, target, unix.MOVE_MOUNT_F_EMPTY_PATH)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func mountBind(source string, target string, readOnly bool, debug bool) error {
 	sourceInfo, err := os.Stat(source)
 	if err != nil {
@@ -277,41 +351,14 @@ func mountBind(source string, target string, readOnly bool, debug bool) error {
 		}
 	}
 
-	if err := unix.Mount(source, target, "", unix.MS_REC|unix.MS_BIND, ""); err != nil {
+	err = mountBindNew(source, target, readOnly)
+	if errors.Is(err, unix.ENOSYS) {
+		err = mountBindOld(source, target, readOnly, debug)
+	}
+	if err != nil {
 		return err
 	}
 
-	// recursively remount everything beneath the given path
-	// doing that on `target` with MS_REC is not enough
-	if readOnly {
-		mountInfo, err := parseMountInfo(target, "/newroot/proc/self/mountinfo")
-		if err != nil {
-			return fmt.Errorf("failed to parse mountinfo: %w", err)
-		}
-
-		for _, mountEntry := range mountInfo {
-			// Skip mountpoints that are shadowed or we have otherwise no access to
-			// since remounting them could return an error.
-			// If we can't stat the mountpoint we shouldn't be able to traverse it so
-			// remounting isn't necessary.
-			_, err = os.Stat(mountEntry.mountPoint)
-			if err != nil {
-				if os.IsNotExist(err) || os.IsPermission(err) {
-					if debug {
-						// strip /newroot/ from mountEntry.mountPoint
-						fmt.Printf("Skipped remounting as read-only: %s\n", mountEntry.mountPoint[8:])
-					}
-					continue
-				} else {
-					return fmt.Errorf("failed to stat %s: %w", mountEntry.mountPoint, err)
-				}
-			}
-
-			if err := remountReadOnly(mountEntry.mountPoint, mountEntry.mountFlags()); err != nil {
-				return fmt.Errorf("failed to remount %s read-only: %w", mountEntry.mountPoint, err)
-			}
-		}
-	}
 	return nil
 }
 
