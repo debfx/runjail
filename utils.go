@@ -4,6 +4,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/user"
@@ -253,7 +254,12 @@ func terminalName(fd uintptr) (string, error) {
 }
 
 func clonePathAsMemfd(path string, memfdName string) (int, error) {
-	memFd, err := unix.MemfdCreate(memfdName, unix.MFD_CLOEXEC|unix.MFD_ALLOW_SEALING)
+	// newer kernel print a warning on memfd_create() without MFD_EXEC or MFD_NOEXEC_SEAL
+	memFd, err := unix.MemfdCreate(memfdName, unix.MFD_CLOEXEC|unix.MFD_ALLOW_SEALING|unix.MFD_EXEC)
+	if errors.Is(err, unix.EINVAL) {
+		// older kernels don't support MFD_EXEC, try without it
+		memFd, err = unix.MemfdCreate(memfdName, unix.MFD_CLOEXEC|unix.MFD_ALLOW_SEALING)
+	}
 	if err != nil {
 		return 0, err
 	}
