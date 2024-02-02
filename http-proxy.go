@@ -228,7 +228,7 @@ func runHttpProxy() error {
 		var err error
 		for {
 			_, err = unix.Poll(fds, -1)
-			if err != unix.EINTR {
+			if !errors.Is(err, unix.EINTR) {
 				break
 			}
 		}

@@ -377,7 +377,7 @@ func reapChildren(mainPid int, helperPids []int, syncFile *os.File) error {
 			}
 		}
 
-		if err == unix.ECHILD {
+		if errors.Is(err, unix.ECHILD) {
 			// no more children to wait upon
 			return nil
 		}
@@ -426,7 +426,7 @@ func reapChildren(mainPid int, helperPids []int, syncFile *os.File) error {
 				// only helper processes left, terminate them
 				for _, pid := range helperPids {
 					err = unix.Kill(pid, unix.SIGKILL)
-					if err != nil && err != unix.ESRCH {
+					if err != nil && !errors.Is(err, unix.ESRCH) {
 						return fmt.Errorf("failed to kill helper process: %w", err)
 					}
 				}
