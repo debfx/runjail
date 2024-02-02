@@ -585,7 +585,7 @@ func usernsChild() error {
 			if err := os.MkdirAll(filepath.Dir(newDir), 0700); err != nil {
 				return fmt.Errorf("creating directory failed: %w", err)
 			}
-			// use mount.Other instead of oldDir here since we don't to change the symlink target
+			// use mount.Other instead of oldDir here since we don't want to change the symlink target
 			if err := os.Symlink(mount.Other, newDir); err != nil {
 				return fmt.Errorf("creating symlink failed: %w", err)
 			}
