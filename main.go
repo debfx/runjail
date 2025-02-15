@@ -5,6 +5,7 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -12,6 +13,7 @@ import (
 	"strings"
 
 	flag "github.com/spf13/pflag"
+	"golang.org/x/sys/unix"
 )
 
 var selfMemFd int
@@ -97,6 +99,12 @@ func main() {
 
 	if os.Getuid() == 0 {
 		fmt.Println("runjail only supports being run by an unprivileged users")
+		os.Exit(1)
+	}
+
+	// close any excess FDs so they are not inherited to the sandboxed process
+	if err := unix.CloseRange(3, math.MaxUint, 0); err != nil {
+		fmt.Printf("failed to close excess FDs: %v\n", err)
 		os.Exit(1)
 	}
 

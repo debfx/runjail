@@ -83,7 +83,7 @@ Wherever paths are accepted `$UID`, `$USER`, `$HOME` and `$XDG_RUNTIME_DIR` with
 
 # Requirements
 
-runjail is tested on Linux >= 4.19
+runjail is tested on Linux >= 5.9
 
 It uses unprvileged user namespaces which is disabled by default on some
 distributions.
