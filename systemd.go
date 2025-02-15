@@ -27,7 +27,7 @@ func createSystemdScope(name string) error {
 	if name == "" {
 		scopeName = fmt.Sprintf("runjail-%d.scope", pid)
 	} else {
-		scopeName = fmt.Sprintf("runjail-%s-%d.scope", name, pid)
+		scopeName = fmt.Sprintf("app-runjail-%s-%d.scope", name, pid)
 	}
 	_, err = dbusConn.StartTransientUnitContext(ctx, scopeName, "fail", properties, statusChan)
 	if err != nil {
