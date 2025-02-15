@@ -25,12 +25,12 @@ func loadFilter(defaultAction seccomp.ScmpAction, debug bool, rules []seccompRul
 		return nil, fmt.Errorf("creating new filter failed: %w", err)
 	}
 
-	api_level, err := seccomp.GetAPI()
+	apiLevel, err := seccomp.GetAPI()
 	if err != nil {
 		return nil, fmt.Errorf("getting api version failed: %w", err)
 	}
 
-	if debug && api_level >= 3 {
+	if debug && apiLevel >= 3 {
 		err = filter.SetLogBit(true)
 		if err != nil {
 			return nil, fmt.Errorf("enabling logging failed: %w", err)
@@ -38,7 +38,7 @@ func loadFilter(defaultAction seccomp.ScmpAction, debug bool, rules []seccompRul
 	}
 
 	// enable binary tree optimization on larger filters
-	if len(rules) > 32 && api_level >= 4 {
+	if len(rules) > 32 && apiLevel >= 4 {
 		err = filter.SetOptimize(2)
 		// ignore error since it's not fatal
 		if err != nil && debug {

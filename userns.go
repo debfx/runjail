@@ -181,8 +181,8 @@ func getAllCaps() ([]uintptr, error) {
 		return result, err
 	}
 
-	for cap := uintptr(0); cap <= lastCap; cap++ {
-		result = append(result, cap)
+	for capability := uintptr(0); capability <= lastCap; capability++ {
+		result = append(result, capability)
 	}
 
 	return result, nil
@@ -190,8 +190,8 @@ func getAllCaps() ([]uintptr, error) {
 
 func dropCapabilities() error {
 	// syscall expects an array of 2 on 64-bit archs
-	cap := [2]unix.CapUserData{}
-	cap[0] = unix.CapUserData{
+	capability := [2]unix.CapUserData{}
+	capability[0] = unix.CapUserData{
 		Effective:   0,
 		Permitted:   0,
 		Inheritable: 0,
@@ -200,7 +200,7 @@ func dropCapabilities() error {
 		&unix.CapUserHeader{
 			Version: unix.LINUX_CAPABILITY_VERSION_3,
 		},
-		&cap[0],
+		&capability[0],
 	)
 }
 

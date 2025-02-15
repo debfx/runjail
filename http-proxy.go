@@ -23,14 +23,14 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-type passHttpProxyChild struct {
+type passHTTPProxyChild struct {
 	Settings   settingsStruct
 	SocketPath string
 	SyncFd     uintptr
 }
 
-func encodePassHttpProxyChild(settings settingsStruct, socketPath string, syncFd uintptr) ([]byte, error) {
-	data := passHttpProxyChild{settings, socketPath, syncFd}
+func encodePassHTTPProxyChild(settings settingsStruct, socketPath string, syncFd uintptr) ([]byte, error) {
+	data := passHTTPProxyChild{settings, socketPath, syncFd}
 	b := bytes.Buffer{}
 	e := gob.NewEncoder(&b)
 	if err := e.Encode(data); err != nil {
@@ -39,8 +39,8 @@ func encodePassHttpProxyChild(settings settingsStruct, socketPath string, syncFd
 	return b.Bytes(), nil
 }
 
-func decodePassHttpProxyChild(input []byte) (settingsStruct, string, uintptr, error) {
-	output := passHttpProxyChild{}
+func decodePassHTTPProxyChild(input []byte) (settingsStruct, string, uintptr, error) {
+	output := passHTTPProxyChild{}
 	b := bytes.Buffer{}
 	b.Write(input)
 	d := gob.NewDecoder(&b)
@@ -73,7 +73,7 @@ func validateAllowedHosts(settings settingsStruct) error {
 	return nil
 }
 
-func setupHttpProxy(originalSettings settingsStruct) (proxyPipe uintptr, proxyMount mount, cleanupFile string, err error) {
+func setupHTTPProxy(originalSettings settingsStruct) (proxyPipe uintptr, proxyMount mount, cleanupFile string, err error) {
 	runtimeDir, err := getUserRuntimeDir()
 	if err != nil {
 		return
@@ -103,7 +103,7 @@ func setupHttpProxy(originalSettings settingsStruct) (proxyPipe uintptr, proxyMo
 	}
 	defer pipeW.Close()
 
-	encodedParams, err := encodePassHttpProxyChild(originalSettings, proxySocketFile.Name(), pipeW.Fd())
+	encodedParams, err := encodePassHTTPProxyChild(originalSettings, proxySocketFile.Name(), pipeW.Fd())
 	if err != nil {
 		return
 	}
@@ -151,7 +151,7 @@ func setupHttpProxy(originalSettings settingsStruct) (proxyPipe uintptr, proxyMo
 	return
 }
 
-func runHttpProxy() error {
+func runHTTPProxy() error {
 	dataFd, _ := strconv.Atoi(os.Args[2])
 	dataFile := os.NewFile(uintptr(dataFd), "")
 	paramsBytes, _ := io.ReadAll(dataFile)
@@ -159,7 +159,7 @@ func runHttpProxy() error {
 		return fmt.Errorf("failed to close the parameters file: %w", err)
 	}
 
-	settings, socketPath, syncFd, _ := decodePassHttpProxyChild(paramsBytes)
+	settings, socketPath, syncFd, _ := decodePassHTTPProxyChild(paramsBytes)
 
 	var allowedHostGlobs []glob.Glob
 	for _, hostname := range settings.AllowedHosts {
@@ -279,7 +279,7 @@ func forwardConnection(localConn net.Conn, proxyServerPath string) {
 	}()
 }
 
-func runHttpProxyForwarder() error {
+func runHTTPProxyForwarder() error {
 	runtimeDir, err := getUserRuntimeDir()
 	if err != nil {
 		return err

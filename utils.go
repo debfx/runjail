@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	SENDFILE_MAX_SIZE = 0x7FFFF000
+	SendfileMaxSize = 0x7FFFF000
 )
 
 func getUsername() (string, error) {
@@ -271,7 +271,7 @@ func clonePathAsMemfd(path string, memfdName string) (int, error) {
 	}
 	defer unix.Close(sourceFd)
 
-	_, err = unix.Sendfile(memFd, sourceFd, nil, SENDFILE_MAX_SIZE)
+	_, err = unix.Sendfile(memFd, sourceFd, nil, SendfileMaxSize)
 	if err != nil {
 		return 0, err
 	}

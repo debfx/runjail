@@ -80,7 +80,7 @@ func main() {
 			}
 			os.Exit(0)
 		} else if os.Args[1] == "http-proxy" {
-			err = runHttpProxy()
+			err = runHTTPProxy()
 			if err != nil {
 				fatalErr(err)
 			}
@@ -89,7 +89,7 @@ func main() {
 	}
 	if len(os.Args) > 1 {
 		if os.Args[1] == "http-proxy-forwarder" {
-			err = runHttpProxyForwarder()
+			err = runHTTPProxyForwarder()
 			if err != nil {
 				fatalErr(err)
 			}
@@ -395,7 +395,7 @@ func main() {
 			fatalErr(err)
 		}
 
-		pipe, proxyMount, cleanupFile, err := setupHttpProxy(settings)
+		pipe, proxyMount, cleanupFile, err := setupHTTPProxy(settings)
 		if len(cleanupFile) > 0 {
 			defer func() {
 				if err := os.Remove(cleanupFile); err != nil {

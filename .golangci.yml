@@ -2,3 +2,18 @@ linters:
   enable:
     - gofmt
     - goimports
+    - asciicheck
+    - bidichk
+    - revive
+
+linters-settings:
+  revive:
+    rules:
+      - name: var-naming
+        severity: warning
+        disabled: false
+        exclude: [""]
+        arguments:
+          - ["ID", "UID"] # AllowList
+          - [] # DenyList
+          - [{"upperCaseConst": false}] # Extra parameter

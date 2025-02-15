@@ -16,7 +16,7 @@ import (
 
 var regexpOctalEscape = regexp.MustCompile(`\\(\d{1,3})`)
 
-var optionFlagMap map[string]int = map[string]int{
+var optionFlagMap = map[string]int{
 	"ro":          unix.MS_RDONLY,
 	"noexec":      unix.MS_NOEXEC,
 	"nosuid":      unix.MS_NOSUID,
