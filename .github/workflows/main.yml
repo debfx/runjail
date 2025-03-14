@@ -7,10 +7,14 @@ jobs:
     name: Build
     strategy:
       matrix:
-        os: [ ubuntu-22.04, ubuntu-20.04 ]
+        os: [ ubuntu-22.04, ubuntu-24.04 ]
         go_version: [ '1.18', '^1.18' ]
     runs-on: ${{ matrix.os }}
     steps:
+      - name: Allow unprivileged user namespaces
+        # needed on Ubuntu >= 24.04
+        run: sudo sysctl -e -w kernel.apparmor_restrict_unprivileged_userns=0
+
       - name: Check out code
         uses: actions/checkout@v4
 
