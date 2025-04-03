@@ -19,8 +19,8 @@ import (
 	"syscall"
 
 	securejoin "github.com/cyphar/filepath-securejoin"
-
 	"golang.org/x/sys/unix"
+	"kernel.org/pub/linux/libs/security/libcap/cap"
 )
 
 type passUsernsChildStruct struct {
@@ -160,7 +160,7 @@ func mountPrivatePropagation() error {
 	return unix.Mount("none", "/", "", unix.MS_REC|unix.MS_PRIVATE, "")
 }
 
-func getCapLastCap() (uintptr, error) {
+func getCapLastCap() (uint, error) {
 	lastCapByteString, err := os.ReadFile("/proc/sys/kernel/cap_last_cap")
 	if err != nil {
 		return 0, err
@@ -171,7 +171,7 @@ func getCapLastCap() (uintptr, error) {
 		return 0, err
 	}
 
-	return uintptr(lastCap), nil
+	return uint(lastCap), nil
 }
 
 func getAllCaps() ([]uintptr, error) {
@@ -181,27 +181,11 @@ func getAllCaps() ([]uintptr, error) {
 		return result, err
 	}
 
-	for capability := uintptr(0); capability <= lastCap; capability++ {
-		result = append(result, capability)
+	for capability := uint(0); capability <= lastCap; capability++ {
+		result = append(result, uintptr(capability))
 	}
 
 	return result, nil
-}
-
-func dropCapabilities() error {
-	// syscall expects an array of 2 on 64-bit archs
-	capability := [2]unix.CapUserData{}
-	capability[0] = unix.CapUserData{
-		Effective:   0,
-		Permitted:   0,
-		Inheritable: 0,
-	}
-	return unix.Capset(
-		&unix.CapUserHeader{
-			Version: unix.LINUX_CAPABILITY_VERSION_3,
-		},
-		&capability[0],
-	)
 }
 
 func dropCapabilityBoundingSet() error {
@@ -210,8 +194,8 @@ func dropCapabilityBoundingSet() error {
 		return err
 	}
 
-	for cap := uintptr(0); cap <= lastCap; cap++ {
-		err = unix.Prctl(unix.PR_CAPBSET_DROP, cap, 0, 0, 0)
+	for capNum := uint(0); capNum <= lastCap; capNum++ {
+		err = cap.DropBound(cap.Value(capNum))
 		if err != nil {
 			return err
 		}
@@ -691,7 +675,7 @@ func usernsChild() error {
 		return fmt.Errorf("dropping capability bounding set failed: %w", err)
 	}
 
-	if err := dropCapabilities(); err != nil {
+	if err := cap.NewSet().SetProc(); err != nil {
 		return fmt.Errorf("dropping capabilities failed: %w", err)
 	}
 
