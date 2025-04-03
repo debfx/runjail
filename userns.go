@@ -134,7 +134,7 @@ func usernsRun(exe string, settings settingsStruct, mounts []mount, environ []st
 	}
 	if err != nil {
 		if exitErr, isExitErr := err.(*exec.ExitError); isExitErr {
-			return exitErr.ProcessState.ExitCode(), nil
+			return exitErr.ExitCode(), nil
 		}
 		return 0, fmt.Errorf("failed to start runjail in new namespace: %w", err)
 	}

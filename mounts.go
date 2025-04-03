@@ -332,7 +332,7 @@ func parseRawMountOptions(options rawMountOptions) ([]mount, error) {
 		previousMount, duplicateMount := seenMounts[mount.Path]
 		if duplicateMount {
 			if previousMount != mount {
-				return nil, fmt.Errorf("Mount \"%s\" has been specified twice", mount.Path)
+				return nil, fmt.Errorf("mount \"%s\" has been specified twice", mount.Path)
 			}
 			// duplicate but equal mount, silently skip
 		} else {
@@ -399,9 +399,10 @@ func validateMounts(mounts []mount) error {
 	symlinkMounts := []string{}
 
 	for _, mount := range mounts {
-		if mount.Type == mountTypeHide {
+		switch mount.Type {
+		case mountTypeHide:
 			hideMounts = append(hideMounts, mount.Path)
-		} else if mount.Type == mountTypeSymlink {
+		case mountTypeSymlink:
 			symlinkMounts = append(symlinkMounts, mount.Path)
 		}
 	}

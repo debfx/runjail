@@ -70,7 +70,7 @@ func getWaylandSocket() (string, error) {
 func getPortalDocDir() (string, error) {
 	conn, err := dbus.SessionBus()
 	if err != nil {
-		return "", fmt.Errorf("Failed to connect to session bus: %w", err)
+		return "", fmt.Errorf("failed to connect to session bus: %w", err)
 	}
 	defer conn.Close()
 
@@ -79,7 +79,7 @@ func getPortalDocDir() (string, error) {
 	var portalDirBytes []byte
 	err = portalDocuments.Call("org.freedesktop.portal.Documents.GetMountPoint", 0).Store(&portalDirBytes)
 	if err != nil {
-		return "", fmt.Errorf("Failed to get portal documents dir: %w", err)
+		return "", fmt.Errorf("failed to get portal documents dir: %w", err)
 	}
 	// result is a byte-encoded zero-terminated string
 	portalDirBytesParts := bytes.Split(portalDirBytes, []byte("\x00"))

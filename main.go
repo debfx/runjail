@@ -73,13 +73,14 @@ func main() {
 
 	// internal subcommands
 	if len(os.Args) > 2 {
-		if os.Args[1] == "userns-child" {
+		switch os.Args[1] {
+		case "userns-child":
 			err := usernsChild()
 			if err != nil {
 				fatalErr(err)
 			}
 			os.Exit(0)
-		} else if os.Args[1] == "http-proxy" {
+		case "http-proxy":
 			err = runHTTPProxy()
 			if err != nil {
 				fatalErr(err)
@@ -138,7 +139,7 @@ func main() {
 	}
 
 	// Ignore errors; CommandLine is set for ExitOnError.
-	flag.CommandLine.Parse(expandedArgs) //nolint:golint,errcheck
+	flag.CommandLine.Parse(expandedArgs) //nolint:errcheck
 
 	selfMemFd, err = clonePathAsMemfd("/proc/self/exe", "runjail")
 	if err != nil {

@@ -1,19 +1,26 @@
+version: "2"
 linters:
   enable:
-    - gofmt
-    - goimports
     - asciicheck
     - bidichk
     - revive
-
-linters-settings:
-  revive:
-    rules:
-      - name: var-naming
-        severity: warning
-        disabled: false
-        exclude: [""]
-        arguments:
-          - ["ID", "UID"] # AllowList
-          - [] # DenyList
-          - [{"upperCaseConst": false}] # Extra parameter
+  settings:
+    errcheck:
+      exclude-functions:
+        - (*github.com/godbus/dbus/v5.Conn).Close
+        - (net.Conn).Close
+        - (net.Listener).Close
+        - (*os.File).Close
+        - golang.org/x/sys/unix.Close
+    revive:
+      rules:
+        - name: var-naming
+          arguments:
+            - - ID
+              - UID
+            - []
+            - - upperCaseConst: false
+formatters:
+  enable:
+    - gofmt
+    - goimports
