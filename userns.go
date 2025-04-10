@@ -213,6 +213,26 @@ func restrictUserNamespaces() error {
 	return nil
 }
 
+func applySeccomp(settings settingsStruct) error {
+	seccompFilters, err := loadSeccomp(settings.Seccomp, settings.Debug)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		for _, filter := range seccompFilters {
+			filter.Release()
+		}
+	}()
+
+	for _, filter := range seccompFilters {
+		if err := filter.Load(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func mountTmpfs(path string, mode string, readOnly bool) error {
 	flags := unix.MS_REC | unix.MS_NOSUID | unix.MS_NODEV | unix.MS_NOATIME
 	if err := unix.Mount("tmpfs", path, "tmpfs", uintptr(flags), "mode="+mode); err != nil {
@@ -684,20 +704,8 @@ func usernsChild() error {
 	}
 
 	if settings.Seccomp != "no" {
-		seccompFilters, err := loadSeccomp(settings.Seccomp, settings.Debug)
-		if err != nil {
-			return err
-		}
-		defer func() {
-			for _, filter := range seccompFilters {
-				filter.Release()
-			}
-		}()
-
-		for _, filter := range seccompFilters {
-			if err := filter.Load(); err != nil {
-				return err
-			}
+		if err := applySeccomp(settings); err != nil {
+			return fmt.Errorf("apply seccomp filter failed: %w", err)
 		}
 	} else {
 		if _, err := unix.Setsid(); err != nil {
