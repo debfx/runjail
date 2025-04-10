@@ -217,8 +217,7 @@ func runHTTPProxy() error {
 	}()
 	defer unixListener.Close()
 
-	syncFile := os.NewFile(syncFd, "pipe")
-	_, err = syncFile.Write([]byte("x"))
+	_, err = unix.Write(int(syncFd), []byte("x"))
 	if err != nil {
 		return err
 	}
