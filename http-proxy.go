@@ -234,12 +234,16 @@ func runHTTPProxy() error {
 		if err != nil {
 			fmt.Printf("error polling the sync pipe: %v\n", err)
 		}
-		// "This bit [POLLERR] is also set for a file descriptor referring to the write end of a pipe when the read end has been closed."
-		if (err != nil) || (fds[0].Revents&unix.POLLHUP != 0) || (fds[0].Revents&unix.POLLERR != 0) {
-			err = httpServer.Shutdown(context.Background())
-			if err != nil {
-				fmt.Println(err)
-			}
+		// Poll() can return POLLHUP, POLLERR, and POLLNVAL in Revents.
+		// POLLHUP or POLLERR is returned when the other side of the pipe is closed.
+		// POLLNVAL is returned when syncFd has been closed/is invalid.
+		// In all cases we want to shutdown the proxy.
+		if fds[0].Revents&unix.POLLNVAL != 0 {
+			fmt.Printf("eror polling the sync pipe: poll() returned POLLNVAL\n")
+		}
+		err = httpServer.Shutdown(context.Background())
+		if err != nil {
+			fmt.Printf("failed to shutdown http proxy server: %v\n", err)
 		}
 	}()
 
