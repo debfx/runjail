@@ -5,7 +5,6 @@ package main
 
 import (
 	"fmt"
-	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -13,7 +12,6 @@ import (
 	"strings"
 
 	flag "github.com/spf13/pflag"
-	"golang.org/x/sys/unix"
 )
 
 var selfMemFd int
@@ -103,12 +101,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	// close any excess FDs so they are not inherited to the sandboxed process
-	if err := unix.CloseRange(3, math.MaxUint, 0); err != nil {
-		fmt.Printf("failed to close excess FDs: %v\n", err)
-		os.Exit(1)
-	}
-
 	flagRo := flag.StringSlice("ro", []string{}, "Mount file/directory from parent namespace read-only.")
 	flagRoTry := flag.StringSlice("ro-try", []string{}, "Mount file/directory from parent namespace read-only. Ignores non-existent source.")
 	flagRw := flag.StringSlice("rw", []string{}, "Mount file/directory from parent namespace read-write.")
@@ -144,6 +136,13 @@ func main() {
 	selfMemFd, err = clonePathAsMemfd("/proc/self/exe", "runjail")
 	if err != nil {
 		panic(err)
+	}
+
+	// make sure we don't leak any inherited fds into sandbox
+	err = closeOnExecAllOpenFds()
+	if err != nil {
+		fmt.Printf("failed to mark inherited fds as close-on-exec: %v\n", err)
+		os.Exit(1)
 	}
 
 	settings := getDefaultSettings()

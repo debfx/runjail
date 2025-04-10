@@ -289,3 +289,52 @@ func clonePathAsMemfd(path string, memfdName string) (int, error) {
 
 	return newFd, nil
 }
+
+func getOpenFiles() ([]int, error) {
+	procDir, err := os.Open("/proc/self/fd")
+	if err != nil {
+		return nil, fmt.Errorf("failed to open /proc/self/fd/: %w", err)
+	}
+	defer procDir.Close()
+
+	result := []int{}
+
+	entries, err := procDir.Readdir(0)
+	if err != nil {
+		return nil, err
+	}
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+
+		fdNum, err := strconv.Atoi(entry.Name())
+		if err != nil {
+			continue
+		}
+
+		result = append(result, fdNum)
+	}
+
+	return result, nil
+}
+
+func closeOnExecAllOpenFds() error {
+	openFds, err := getOpenFiles()
+	if err != nil {
+		return fmt.Errorf("failed to get open fds: %w", err)
+	}
+	for _, openFd := range openFds {
+		if openFd <= 2 {
+			continue
+		}
+
+		err = setCloseOnExec(uintptr(openFd))
+		// ignore EBADF in case the fd has been closed in the meantime
+		if err != nil && !errors.Is(err, unix.EBADF) {
+			return fmt.Errorf("failed to set O_CLOEXEC on fd %d: %w", openFd, err)
+		}
+	}
+
+	return nil
+}
