@@ -1,0 +1,23 @@
+#!/bin/sh
+
+set -eu
+
+if ! grep -P -q 'Seccomp:\s+2' /proc/self/status; then
+  echo "Unexpected Seccomp value" > /dev/stderr
+fi
+
+if ! grep -P -q 'NoNewPrivs:\s+1' /proc/self/status; then
+  echo "Unexpected NoNewPrivs value" > /dev/stderr
+fi
+
+if ! grep -P -q 'CapEff:\s+0000000000000000' /proc/self/status; then
+  echo "Unexpected CapEff value" > /dev/stderr
+fi
+if ! grep -P -q 'CapBnd:\s+0000000000000000' /proc/self/status; then
+  echo "Unexpected CapEff value" > /dev/stderr
+fi
+if ! grep -P -q 'CapAmb:\s+0000000000000000' /proc/self/status; then
+  echo "Unexpected CapEff value" > /dev/stderr
+fi
+
+echo "checkproctest"

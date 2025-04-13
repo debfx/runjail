@@ -109,3 +109,11 @@ func TestUnshare(t *testing.T) {
 	assertNil(t, err)
 	assertEqual(t, "unsharetest", stdout)
 }
+
+func TestCheckProc(t *testing.T) {
+	tempDir := createTempDataDir(t)
+
+	stdout, err := runTest("checkproc", []string{"--cwd", tempDir, "--ro", tempDir})
+	assertNil(t, err)
+	assertEqual(t, "checkproctest", stdout)
+}
