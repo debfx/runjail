@@ -15,11 +15,11 @@ require (
 	golang.org/x/sys v0.30.0
 	gopkg.in/yaml.v2 v2.4.0
 	kernel.org/pub/linux/libs/security/libcap/cap v1.2.75
+	kernel.org/pub/linux/libs/security/libcap/psx v1.2.75
 )
 
 require (
 	github.com/vishvananda/netns v0.0.5 // indirect
 	golang.org/x/net v0.35.0 // indirect
 	golang.org/x/text v0.22.0 // indirect
-	kernel.org/pub/linux/libs/security/libcap/psx v1.2.75 // indirect
 )

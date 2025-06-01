@@ -713,6 +713,14 @@ func usernsChild() error {
 		}
 	}
 
+	if settings.Network {
+		// only needed if we share the host network namespace
+		err = landlockIsolateAbstractUnixSocket(settings.Debug)
+		if err != nil {
+			return fmt.Errorf("failed to apply landlock restrictions: %w", err)
+		}
+	}
+
 	helperPids := []int{}
 
 	for _, helper := range settings.Helpers {
