@@ -258,6 +258,75 @@ func loadSeccomp(filterName string, debug bool) ([]*seccomp.ScmpFilter, error) {
 			OpValue1: unix.CLONE_NEWUSER,
 			OpValue2: unix.CLONE_NEWUSER,
 		},
+		// block MSG_OOB: rarely used, reduce attack surface
+		{
+			Action:   actionEperm,
+			Syscall:  unix.SYS_RECVMSG,
+			Arg:      2,
+			Op:       seccomp.CompareMaskedEqual,
+			OpValue1: unix.MSG_OOB,
+			OpValue2: unix.MSG_OOB,
+		},
+		{
+			Action:   actionEperm,
+			Syscall:  unix.SYS_RECVFROM,
+			Arg:      3,
+			Op:       seccomp.CompareMaskedEqual,
+			OpValue1: unix.MSG_OOB,
+			OpValue2: unix.MSG_OOB,
+		},
+		{
+			Action:   actionEperm,
+			Syscall:  unix.SYS_RECVMMSG,
+			Arg:      3,
+			Op:       seccomp.CompareMaskedEqual,
+			OpValue1: unix.MSG_OOB,
+			OpValue2: unix.MSG_OOB,
+		},
+		{
+			Action:   actionEperm,
+			Syscall:  unix.SYS_SENDMSG,
+			Arg:      2,
+			Op:       seccomp.CompareMaskedEqual,
+			OpValue1: unix.MSG_OOB,
+			OpValue2: unix.MSG_OOB,
+		},
+		{
+			Action:   actionEperm,
+			Syscall:  unix.SYS_SENDTO,
+			Arg:      3,
+			Op:       seccomp.CompareMaskedEqual,
+			OpValue1: unix.MSG_OOB,
+			OpValue2: unix.MSG_OOB,
+		},
+		{
+			Action:   actionEperm,
+			Syscall:  unix.SYS_SENDMMSG,
+			Arg:      3,
+			Op:       seccomp.CompareMaskedEqual,
+			OpValue1: unix.MSG_OOB,
+			OpValue2: unix.MSG_OOB,
+		},
+	}
+
+	// dynamically add MSG_OOB rules for syscalls that are not available on all architectures
+	for _, syscallName := range []string{"recv", "recvmmsg_time64", "send"} {
+		syscallNo, err := seccomp.GetSyscallFromName(syscallName)
+		if err != nil {
+			// skip syscalls that aren't available
+			continue
+		}
+
+		rulesMaskedEqual = append(rulesMaskedEqual,
+			seccompRule{
+				Action:   actionEperm,
+				Syscall:  syscallNo,
+				Arg:      2,
+				Op:       seccomp.CompareMaskedEqual,
+				OpValue1: unix.MSG_OOB,
+				OpValue2: unix.MSG_OOB,
+			},
+		)
 	}
 
 	filterMaskedEqual, err := loadFilter(seccomp.ActAllow, debug, rulesMaskedEqual)
